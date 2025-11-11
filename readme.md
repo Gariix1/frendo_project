@@ -1,72 +1,128 @@
-# 🎁 Secret Friend Web App (Pikkado-like)
+# 🎁 Aplicación Web de Amigo Secreto (Estilo Pikkado)
 
-A simple web app to organize **Secret Santa / Secret Friend** games without requiring users to log in or create accounts.  
-Each participant receives a **unique link** to discover who they have to gift, just like [Pikkado](https://pikkado.com).
-
----
-
-## 🚀 Project Overview
-
-This project allows a group organizer to create a game, register participants, and automatically assign each person a random "secret friend".  
-The app generates **unique access links** per participant — no usernames, passwords, or sign-ins required.
-
-### Main Flow
-
-1. The organizer visits the web app and creates a new game:
-   - Adds a list of participant names.
-   - Optionally defines exclusions (e.g., “John can’t get Mary”).
-   - Clicks **“Generate links”**.
-2. The system:
-   - Randomly assigns each participant another person.
-   - Creates a unique tokenized URL for each one:
-     ```
-     https://mysecretfriend.app/game/ABC123/token/1f92f8a9
-     ```
-   - Stores the assignments in a small database (or JSON).
-3. The organizer shares each link privately.
-4. Each participant opens their link and sees **only** their assigned friend:
-   ```
-   "You are the secret friend of Carla 🎁"
-   ```
-5. Tokens can be marked as “viewed” so that the same link cannot reveal the result again.
+Una aplicación web **mobile-first**, moderna y visualmente atractiva para organizar juegos de **Amigo Secreto / Amigo Invisible** sin necesidad de que los usuarios creen cuentas o inicien sesión.  
+Cada participante recibe un **enlace único** para descubrir a quién debe regalar.
 
 ---
 
-## 🧩 Key Features
+## 🚀 Descripción del Proyecto
 
-- ✅ No authentication (no accounts, no passwords).
-- 🔒 Unique link with secure random token.
-- 🎲 Random but non-repetitive assignment.
-- 🚫 Self-assignment prevented (A ≠ A).
-- 🗃️ Optional: save results in a small backend (FastAPI, Node.js, or Firebase).
-- 📱 Mobile-friendly and shareable via WhatsApp or email.
+Esta aplicación permite que un organizador cree un juego, registre participantes y asigne aleatoriamente a cada persona un "amigo secreto".  
+El frontend se centra en la **experiencia móvil**, combinando **interfaz moderna (glassmorphism)** y un flujo intuitivo, mientras que el backend usa **FastAPI** para mantener el sistema ligero, rápido y escalable.
 
 ---
 
-## 🎗️ Suggested Architecture
+## 🎯 Alcance del Proyecto
 
-**Frontend:**  
-- React / Vite or plain HTML + JS.  
-- Fetch API for backend communication.  
-- Simple routes:
-  - `/create` → create a new game.
-  - `/game/:id` → game summary.
-  - `/join/:token` → participant view.
+### Objetivo principal
+Ofrecer una experiencia simple, bonita y privada para sorteos de amigo secreto en línea sin autenticación.
 
-**Backend:**  
-- Python (FastAPI) or Node.js (Express).
-- REST endpoints:
-  ```
-  POST /api/games          -> create game
-  POST /api/games/:id/add  -> add participants
-  POST /api/games/:id/draw -> randomize assignments
-  GET  /api/games/:id/:token -> get assigned person
-  ```
-- Data stored in memory, JSON file, or lightweight DB (e.g. SQLite, Firestore).
+### Funcionalidades incluidas
+- Creación de un nuevo juego por parte del organizador.
+- Registro de nombres de participantes.
+- Generación de enlaces únicos y tokenizados.
+- Asignación aleatoria sin autoasignaciones.
+- Vista individual del resultado por participante.
+- Diseño **mobile-first**, adaptable a cualquier dispositivo.
+
+### Futuras mejoras
+- Envío de invitaciones por correo o WhatsApp.
+- Restricciones personalizadas (parejas, familiares, etc.).
+- Persistencia avanzada en base de datos.
+- Conversión a **PWA** instalable.
 
 ---
 
-## 🧮 Example Data Structure
+## 🧰 Lenguajes y Tecnologías
+
+| Capa | Tecnología |
+|-------|-------------|
+| Frontend | **React + Vite + TailwindCSS** (con Glassmorphism) |
+| Backend | **FastAPI (Python)** |
+| Base de datos | JSON temporal / SQLite / Firebase |
+| Hosting | Frontend: Vercel / Netlify · Backend: Render / Railway |
+
+---
+
+## ⚙️ Requisitos
+
+### Requisitos funcionales
+- Permitir crear un juego con una lista de participantes.  
+- Generar un enlace único por participante con token seguro.  
+- Impedir que una persona se asigne a sí misma.  
+- Mostrar el resultado solo una vez por token.  
+
+### Requisitos no funcionales
+- Diseño **responsive y mobile-first**.
+- Estética moderna con efecto **glass / liquid glass**.
+- Carga rápida y navegación fluida.
+- Código modular y mantenible.
+
+---
+
+## 🔄 Flujo del Sistema
+
+1. **Creación del juego:** El organizador ingresa nombres y genera el juego.  
+2. **Generación de tokens:** Se crean enlaces únicos, por ejemplo:  
+   `https://amigosecreto.app/juego/ABC123/token/1f92f8a9`
+3. **Asignación aleatoria:** El backend asigna pares sin autoasignaciones.
+4. **Distribución de enlaces:** El organizador comparte los links con los participantes.  
+5. **Visualización:** Cada participante ve a su amigo secreto al abrir su enlace.
+6. **Control de acceso:** El token se marca como “visto” para evitar múltiples visualizaciones.
+
+---
+
+## 🏗️ Arquitectura del Proyecto
+
+### Estructura de carpetas sugerida
+```
+project/
+│
+├── backend/
+│   ├── main.py            # FastAPI app principal
+│   ├── models.py          # Modelos Pydantic
+│   ├── routes.py          # Endpoints REST
+│   ├── utils.py           # Lógica de sorteo y tokens
+│   └── data.json          # Almacenamiento temporal
+│
+├── frontend/
+│   ├── src/
+│   │   ├── components/    # GlassCard, Button, Layout...
+│   │   ├── pages/         # CreateGame, GameLinks, ViewResult
+│   │   └── App.tsx
+│   └── index.html
+│
+└── README.md
+```
+
+### Endpoints principales (FastAPI)
+```python
+POST /api/games             # Crear nuevo juego
+POST /api/games/{id}/draw   # Asignar aleatoriamente
+GET  /api/games/{id}/{token} # Obtener amigo secreto asignado
+```
+
+---
+
+## 🎨 Estilo y Diseño (Frontend)
+
+El frontend usa **TailwindCSS** con estilo **Glassmorphism** (fondo translúcido, blur, sombras suaves):
+
+```jsx
+<div className="bg-white/10 backdrop-blur-md border border-white/30 rounded-3xl shadow-xl p-6">
+  <h1 className="text-2xl font-semibold mb-2">🎁 Amigo Secreto</h1>
+  <p className="text-sm text-slate-100/80">Te tocó <span className="font-bold">Carla</span></p>
+</div>
+```
+
+### Paleta recomendada
+- Fondo degradado: `from-slate-900 via-slate-950 to-emerald-900`
+- Colores principales: **Esmeralda, blanco translúcido, morado tenue.**
+- Tipografía moderna y legible (`Inter`, `Poppins`, o `Nunito`).
+
+---
+
+## 🧮 Ejemplo de Estructura de Datos
 
 ```json
 {
@@ -81,40 +137,26 @@ The app generates **unique access links** per participant — no usernames, pass
 
 ---
 
-## 💡 Future Ideas
-
-- Add email sending for invitations.
-- Allow custom messages or gift preferences.
-- Add option for “couple exclusions”.
-- Deploy backend on Render / Vercel / Firebase Functions.
-
----
-
-## 🧰 Tech Stack (suggested)
-
-| Layer | Tech |
-|-------|------|
-| Frontend | React / Vite / Tailwind |
-| Backend | FastAPI or Express |
-| Database | SQLite / Firebase / JSON file |
-| Hosting | Vercel / Render / Netlify |
+## 💡 Ideas Futuras
+- Envío de correos automáticos con enlaces.  
+- Configuración de exclusiones personalizadas.  
+- Panel de administración para el organizador.  
+- Conversión en **Progressive Web App (PWA)**.
 
 ---
 
-## 🧐 Goal for Codex
+## 🧠 Objetivo para Codex
 
-Generate:
-- REST API endpoints.
-- Random assignment logic with no self-pairs.
-- Simple UI pages for creation, game summary, and participant view.
-- Token generation and basic data persistence.
+Generar:
+- Endpoints REST (FastAPI).
+- Lógica de sorteo aleatorio sin autoasignación.
+- Componentes React con diseño glass y responsive.
+- Manejo de tokens y persistencia ligera.
 
-Focus on **clarity, simplicity, and privacy** — one link per person, no accounts, no reuse.
+**Enfocado en:** claridad, estética y experiencia móvil perfecta.
 
 ---
 
-## 📄 License
+## 📄 Licencia
 
-MIT License — feel free to use and modify.
-
-# frendo_project
+Licencia MIT — libre para usar y modificar.
