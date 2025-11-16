@@ -1,8 +1,9 @@
 import { Link, useLocation } from 'react-router-dom'
-import { useEffect, useMemo, useRef, useState, useCallback } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useI18n } from '../i18n/I18nProvider'
 import LanguageSwitcher from './LanguageSwitcher'
 import AnimatedText from './AnimatedText'
+import { useSlidingHighlight } from '../animations/useSlidingHighlight'
 
 export default function NavBar() {
   const { pathname } = useLocation()
@@ -41,79 +42,14 @@ export default function NavBar() {
     { to: '/admin', label: t('nav.admin') },
   ], [t])
 
-  const linkRefs = useRef<Record<string, HTMLAnchorElement | null>>({})
-  const navRef = useRef<HTMLDivElement | null>(null)
-  const [highlight, setHighlight] = useState<{ width: number; left: number } | null>(null)
-  const measurementFrame = useRef<number | null>(null)
-
-  const updateHighlight = useCallback(() => {
-    const currentItem = navItems.find(item => item.to === pathname)
-    if (!currentItem) {
-      setHighlight(null)
-      return
-    }
-    const el = linkRefs.current[currentItem.to]
-    const container = navRef.current
-    if (el && container) {
-      const rect = el.getBoundingClientRect()
-      const parentRect = container.getBoundingClientRect()
-      setHighlight({
-        width: rect.width,
-        left: rect.left - parentRect.left,
-      })
-    } else {
-      setHighlight(null)
-    }
-  }, [pathname, navItems])
-
-  const scheduleHighlight = useCallback(() => {
-    if (typeof window === 'undefined') return
-    if (measurementFrame.current !== null) {
-      cancelAnimationFrame(measurementFrame.current)
-    }
-    measurementFrame.current = window.requestAnimationFrame(() => {
-      updateHighlight()
-      measurementFrame.current = null
-    })
-  }, [updateHighlight])
-
-  useEffect(() => {
-    scheduleHighlight()
-    window.addEventListener('resize', scheduleHighlight)
-    return () => {
-      window.removeEventListener('resize', scheduleHighlight)
-      if (measurementFrame.current !== null) {
-        cancelAnimationFrame(measurementFrame.current)
-        measurementFrame.current = null
-      }
-    }
-  }, [scheduleHighlight])
-
-  useEffect(() => {
-    const element = navRef.current
-    if (!element) return
-
-    const resizeObserver = typeof ResizeObserver !== 'undefined'
-      ? new ResizeObserver(() => scheduleHighlight())
-      : null
-    const mutationObserver = typeof MutationObserver !== 'undefined'
-      ? new MutationObserver(() => scheduleHighlight())
-      : null
-
-    resizeObserver?.observe(element)
-    mutationObserver?.observe(element, { childList: true, subtree: true, characterData: true })
-
-    return () => {
-      resizeObserver?.disconnect()
-      mutationObserver?.disconnect()
-    }
-  }, [scheduleHighlight])
+  const activeKey = useMemo(() => navItems.find(item => item.to === pathname)?.to ?? null, [navItems, pathname])
+  const { highlight, containerRef, registerItem } = useSlidingHighlight(activeKey)
 
   const link = (item: { to: string; label: string }) => (
     <Link
       key={item.to}
       to={item.to}
-      ref={(el) => { linkRefs.current[item.to] = el }}
+      ref={registerItem(item.to)}
       className={`relative z-10 px-3 py-1.5 rounded-full font-semibold text-sm transition-colors duration-300 ${
         pathname === item.to
           ? 'text-slate-900 drop-shadow-[0_1px_0_rgba(255,255,255,0.65)]'
@@ -131,7 +67,7 @@ export default function NavBar() {
           <Link to="/" className="font-semibold tracking-wide">
             <AnimatedText watch={t('brand.title')}>{t('brand.title')}</AnimatedText>
           </Link>
-          <nav ref={navRef} className="relative flex items-center gap-1 sm:gap-2 text-sm whitespace-nowrap overflow-hidden">
+          <nav ref={containerRef} className="relative flex items-center gap-1 sm:gap-2 text-sm whitespace-nowrap overflow-hidden">
             {highlight && (
               <span
                 className="absolute top-0.5 bottom-0.5 rounded-full bg-gradient-to-br from-[#f8faff] via-[#e3e9ff] to-[#cfd7ff] shadow-[inset_0_1px_0_rgba(255,255,255,0.65),0_10px_25px_rgba(13,21,45,0.4)] transition-all duration-300 ease-out"

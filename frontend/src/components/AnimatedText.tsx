@@ -6,6 +6,7 @@ type Props = PropsWithChildren<{
   className?: string
 }>
 
+// Smoothly transitions text whenever `watch` (plus locale) changes.
 export default function AnimatedText({ watch, className = '', children }: Props) {
   const { locale } = useI18n()
   const [current, setCurrent] = useState<{ id: string | number; content: ReactNode } | null>(null)
