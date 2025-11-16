@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import GlassCard from '../components/GlassCard'
 import Button from '../components/Button'
@@ -79,7 +79,15 @@ export default function GameLinks() {
     }
   }
 
-  useEffect(() => { (async () => { try { setPeople(await api.listPeople()) } catch {} })() }, [])
+  const loadPeople = useCallback(async () => {
+    try {
+      setPeople(await api.listPeople())
+    } catch {
+      /* ignore */
+    }
+  }, [])
+
+  useEffect(() => { loadPeople() }, [loadPeople])
 
   const doDraw = async (force = false) => {
     if (!gameId) return
@@ -247,7 +255,12 @@ export default function GameLinks() {
           <FormSection
             title={t('sections.addParticipants')}
             description={t('labels.fromDirectory')}
-            action={<Button onClick={addPeople} disabled={!adminPassword || loading || (!Object.values(selectedPeople).some(Boolean))}>{t('buttons.addSelected')}</Button>}
+            action={(
+              <div className="flex items-center gap-2">
+                <Button type="button" variant="ghost" onClick={loadPeople} disabled={loading}>{t('buttons.refresh')}</Button>
+                <Button onClick={addPeople} disabled={!adminPassword || loading || (!Object.values(selectedPeople).some(Boolean))}>{t('buttons.addSelected')}</Button>
+              </div>
+            )}
           >
             <CardSurface className="max-h-40 overflow-auto p-2">
               {people.map(p => (

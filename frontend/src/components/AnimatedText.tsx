@@ -1,4 +1,4 @@
-import { PropsWithChildren, useEffect, useState } from 'react'
+import { PropsWithChildren, ReactNode, useEffect, useState } from 'react'
 import { useI18n } from '../i18n/I18nProvider'
 
 type Props = PropsWithChildren<{
@@ -8,8 +8,8 @@ type Props = PropsWithChildren<{
 
 export default function AnimatedText({ watch, className = '', children }: Props) {
   const { locale } = useI18n()
-  const [current, setCurrent] = useState<{ id: string | number; content: React.ReactNode } | null>(null)
-  const [prev, setPrev] = useState<{ id: string | number; content: React.ReactNode } | null>(null)
+  const [current, setCurrent] = useState<{ id: string | number; content: ReactNode } | null>(null)
+  const [prev, setPrev] = useState<{ id: string | number; content: ReactNode } | null>(null)
   const derivedKey = `${String(watch ?? '')}-${locale}`
 
   useEffect(() => {

@@ -4,11 +4,11 @@ import { api } from '../lib/api'
 import { useI18n } from '../i18n/I18nProvider'
 import { validationRules, validators, formatValidationError, normalizeWhitespace } from '../lib/validation'
 
-type SelectedPerson = { id: string; name: string }
+type SelectedPerson = { id: string; name: string; source: 'directory' | 'manual'; personId?: string }
 
 type PickerSelection = {
   ids: string[]
-  people: SelectedPerson[]
+  people: { id: string; name: string }[]
 }
 
 export function useCreateGameForm(initialTitle = 'Amigo Secreto') {
@@ -22,8 +22,11 @@ export function useCreateGameForm(initialTitle = 'Amigo Secreto') {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const selectedIds = useMemo(() => selectedPeople.map(person => person.id), [selectedPeople])
-  const participantCount = selectedIds.length
+  const selectedDirectoryIds = useMemo(
+    () => selectedPeople.filter(person => person.source === 'directory' && person.personId).map(person => person.personId!) ,
+    [selectedPeople],
+  )
+  const participantCount = selectedPeople.length
   const minParticipants = validationRules.game.minParticipants
 
   const normalizeError = useCallback(
@@ -67,7 +70,9 @@ export function useCreateGameForm(initialTitle = 'Amigo Secreto') {
       try {
         const normalizedTitle = normalizeWhitespace(title) || initialTitle
         const normalizedPassword = password.trim()
-        const res = await api.createGameByPeople(normalizedTitle, normalizedPassword, selectedIds)
+        const personIds = selectedPeople.filter(p => p.source === 'directory' && p.personId).map(p => p.personId as string)
+        const manualNames = selectedPeople.filter(p => p.source === 'manual').map(p => p.name)
+        const res = await api.createGame(normalizedTitle, normalizedPassword, { personIds, participants: manualNames })
         try {
           localStorage.setItem(`adminpw:${res.game_id}`, normalizedPassword)
         } catch {
@@ -80,11 +85,27 @@ export function useCreateGameForm(initialTitle = 'Amigo Secreto') {
         setLoading(false)
       }
     },
-    [participantCount, t, title, initialTitle, password, selectedIds, navigate, normalizeError, minParticipants],
+    [participantCount, t, title, initialTitle, password, selectedPeople, navigate, normalizeError, minParticipants],
   )
 
   const handlePickerConfirm = useCallback((selection: PickerSelection) => {
-    setSelectedPeople(selection.people)
+    setSelectedPeople(prev => {
+      const manualEntries = prev.filter(person => person.source === 'manual')
+      const merged = selection.people.map(person => ({
+        id: person.id,
+        personId: person.id,
+        name: person.name,
+        source: 'directory' as const,
+      }))
+      const seen = new Set(manualEntries.map(p => p.name.toLowerCase()))
+      const dedupedMerged = merged.filter(p => {
+        const key = p.name.toLowerCase()
+        if (seen.has(key)) return false
+        seen.add(key)
+        return true
+      })
+      return [...manualEntries, ...dedupedMerged]
+    })
     setPickerOpen(false)
   }, [])
 
@@ -94,6 +115,33 @@ export function useCreateGameForm(initialTitle = 'Amigo Secreto') {
 
   const openPicker = useCallback(() => setPickerOpen(true), [])
   const closePicker = useCallback(() => setPickerOpen(false), [])
+
+  const addManualParticipant = useCallback(
+    (name: string): string | null => {
+      const normalized = normalizeWhitespace(name)
+      if (!normalized) {
+        return formatValidationError({ key: 'validation.required', fieldKey: 'fields.participantName' }, t)
+      }
+      const validationError = validators.participantName(normalized)
+      if (validationError) {
+        return formatValidationError(validationError, t)
+      }
+      const exists = selectedPeople.some(person => person.name.toLowerCase() === normalized.toLowerCase())
+      if (exists) {
+        return t('errors.duplicateNames')
+      }
+      setSelectedPeople(prev => [
+        ...prev,
+        {
+          id: `manual-${Date.now()}-${prev.length}`,
+          name: normalized,
+          source: 'manual',
+        },
+      ])
+      return null
+    },
+    [selectedPeople, t],
+  )
 
   return {
     title,
@@ -105,11 +153,12 @@ export function useCreateGameForm(initialTitle = 'Amigo Secreto') {
     closePicker,
     handlePickerConfirm,
     selectedPeople,
-    selectedIds,
+    selectedDirectoryIds,
     participantCount,
     handleSubmit,
     loading,
     error,
     removeSelectedPerson,
+    addManualParticipant,
   }
 }

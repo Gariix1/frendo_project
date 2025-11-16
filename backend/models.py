@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, validator, root_validator
 from typing import List, Optional
 
 from .validation import (
@@ -19,8 +19,8 @@ class CreateGameRequest(BaseModel):
     admin_password: str = Field(
         min_length=ADMIN_PASSWORD_RULES["minLength"], max_length=ADMIN_PASSWORD_RULES["maxLength"]
     )
-    # Exclusively from global directory
-    person_ids: List[str] = Field(min_items=GAME_RULES["minParticipants"])
+    person_ids: List[str] = Field(default_factory=list)
+    participants: List[str] = Field(default_factory=list)
 
     @validator("title")
     def normalize_title(cls, v: str) -> str:
@@ -30,12 +30,54 @@ class CreateGameRequest(BaseModel):
     def normalize_admin_password(cls, v: str) -> str:
         return validate_admin_password(v)
 
-    @validator("person_ids")
-    def validate_person_ids(cls, v: List[str]) -> List[str]:
+    @validator("person_ids", pre=True, always=True)
+    def validate_person_ids(cls, v: Optional[List[str]]) -> List[str]:
+        if not v:
+            return []
+        if not isinstance(v, list):
+            raise ValueError("person_ids must be a list")
+        cleaned = []
+        seen = set()
+        for pid in v:
+            if pid is None:
+                continue
+            pid_str = str(pid).strip()
+            if not pid_str:
+                continue
+            if pid_str in seen:
+                continue
+            seen.add(pid_str)
+            cleaned.append(pid_str)
+        return cleaned
+
+    @validator("participants", pre=True, always=True)
+    def validate_participants(cls, v: Optional[List[str]]) -> List[str]:
+        if not v:
+            return []
+        if not isinstance(v, list):
+            raise ValueError("participants must be a list")
+        cleaned: List[str] = []
+        seen = set()
+        for name in v:
+            normalized = validate_participant_name(str(name))
+            key = normalized.lower()
+            if key in seen:
+                raise ValueError("duplicate participant names")
+            seen.add(key)
+            cleaned.append(normalized)
+        return cleaned
+
+    @root_validator(skip_on_failure=True)
+    def ensure_participants_source(cls, values):
+        person_ids = values.get("person_ids") or []
+        participants = values.get("participants") or []
+        if not person_ids and not participants:
+            raise ValueError("at least one participant source is required")
+        total = len(person_ids) + len(participants)
         min_required = GAME_RULES["minParticipants"]
-        if len(set(v)) < min_required:
-            raise ValueError(f"at least {min_required} unique person_ids required")
-        return v
+        if total < min_required:
+            raise ValueError(f"at least {min_required} participants required")
+        return values
 
 
 class AddParticipantsRequest(BaseModel):

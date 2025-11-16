@@ -44,6 +44,7 @@ export default function NavBar() {
   const linkRefs = useRef<Record<string, HTMLAnchorElement | null>>({})
   const navRef = useRef<HTMLDivElement | null>(null)
   const [highlight, setHighlight] = useState<{ width: number; left: number } | null>(null)
+  const measurementFrame = useRef<number | null>(null)
 
   const updateHighlight = useCallback(() => {
     const currentItem = navItems.find(item => item.to === pathname)
@@ -65,13 +66,48 @@ export default function NavBar() {
     }
   }, [pathname, navItems])
 
-  useEffect(() => {
-    updateHighlight()
-    window.addEventListener('resize', updateHighlight)
-    return () => {
-      window.removeEventListener('resize', updateHighlight)
+  const scheduleHighlight = useCallback(() => {
+    if (typeof window === 'undefined') return
+    if (measurementFrame.current !== null) {
+      cancelAnimationFrame(measurementFrame.current)
     }
+    measurementFrame.current = window.requestAnimationFrame(() => {
+      updateHighlight()
+      measurementFrame.current = null
+    })
   }, [updateHighlight])
+
+  useEffect(() => {
+    scheduleHighlight()
+    window.addEventListener('resize', scheduleHighlight)
+    return () => {
+      window.removeEventListener('resize', scheduleHighlight)
+      if (measurementFrame.current !== null) {
+        cancelAnimationFrame(measurementFrame.current)
+        measurementFrame.current = null
+      }
+    }
+  }, [scheduleHighlight])
+
+  useEffect(() => {
+    const element = navRef.current
+    if (!element) return
+
+    const resizeObserver = typeof ResizeObserver !== 'undefined'
+      ? new ResizeObserver(() => scheduleHighlight())
+      : null
+    const mutationObserver = typeof MutationObserver !== 'undefined'
+      ? new MutationObserver(() => scheduleHighlight())
+      : null
+
+    resizeObserver?.observe(element)
+    mutationObserver?.observe(element, { childList: true, subtree: true, characterData: true })
+
+    return () => {
+      resizeObserver?.disconnect()
+      mutationObserver?.disconnect()
+    }
+  }, [scheduleHighlight])
 
   const link = (item: { to: string; label: string }) => (
     <Link

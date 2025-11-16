@@ -14,7 +14,7 @@ export const validationRules: ValidationConfig = validationConfig as ValidationC
 
 export type ValidationError = {
   key: string
-  params?: Record<string, string | number>
+  params?: Record<string, string | number | undefined>
   fieldKey?: string
 }
 
@@ -46,7 +46,12 @@ export const validators = {
 export type TranslateFn = (key: string, params?: Record<string, string | number>) => string
 
 export function formatValidationError(error: ValidationError, t: TranslateFn): string {
-  const params = { ...(error.params || {}) }
+  const params: Record<string, string | number> = {}
+  Object.entries(error.params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      params[key] = value
+    }
+  })
   if (error.fieldKey) {
     params.field = t(error.fieldKey)
   }

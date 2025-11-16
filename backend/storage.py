@@ -2,7 +2,8 @@ import json
 import os
 import sqlite3
 import threading
-from typing import Any, Dict
+from contextlib import contextmanager
+from typing import Any, Dict, Iterator
 
 DATA_DIR = os.path.join(os.path.dirname(__file__))
 JSON_FALLBACK = os.path.join(DATA_DIR, "data.json")
@@ -64,42 +65,47 @@ def _migrate_from_json(conn: sqlite3.Connection) -> Dict[str, Any]:
     return data
 
 
-def load_state() -> Dict[str, Any]:
-    _ensure_data_dir()
-    with _lock:
-        conn = _connect()
-        _init_db(conn)
-        raw = _read_kv(conn, "state")
-        if raw is None:
-            # First time: try migrate from json fallback, else create default
-            data = _migrate_from_json(conn)
-            # ensure shape
-            if "games" not in data:
-                data["games"] = {}
-            if "people" not in data:
-                data["people"] = []
-            return data
+def _load_from_conn(conn: sqlite3.Connection) -> Dict[str, Any]:
+    raw = _read_kv(conn, "state")
+    if raw is None:
+        data = _migrate_from_json(conn)
+    else:
         try:
             data = json.loads(raw)
-            if "games" not in data:
-                data["games"] = {}
-            if "people" not in data:
-                data["people"] = []
-            return data
         except Exception:
-            return _default_state()
+            data = _default_state()
+    if "games" not in data:
+        data["games"] = {}
+    if "people" not in data:
+        data["people"] = []
+    return data
 
 
-def save_state(state: Dict[str, Any]) -> None:
+def load_state() -> Dict[str, Any]:
+    _ensure_data_dir()
+    conn = _connect()
+    try:
+        _init_db(conn)
+        return _load_from_conn(conn)
+    finally:
+        conn.close()
+
+
+@contextmanager
+def edit_state() -> Iterator[Dict[str, Any]]:
     _ensure_data_dir()
     with _lock:
         conn = _connect()
-        _init_db(conn)
-        payload = json.dumps(state, ensure_ascii=False, separators=(",", ":"))
-        _write_kv(conn, "state", payload)
-        # also write json fallback for human inspection/backups
         try:
-            with open(JSON_FALLBACK + ".bak", "w", encoding="utf-8") as f:
-                f.write(payload)
-        except Exception:
-            pass
+            _init_db(conn)
+            state = _load_from_conn(conn)
+            yield state
+            payload = json.dumps(state, ensure_ascii=False, separators=(",", ":"))
+            _write_kv(conn, "state", payload)
+            try:
+                with open(JSON_FALLBACK + ".bak", "w", encoding="utf-8") as f:
+                    f.write(payload)
+            except Exception:
+                pass
+        finally:
+            conn.close()

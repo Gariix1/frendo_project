@@ -1,4 +1,4 @@
-import { useId } from 'react'
+import { useId, useState } from 'react'
 import GlassCard from '../components/GlassCard'
 import Button from '../components/Button'
 import Layout from '../components/Layout'
@@ -16,6 +16,8 @@ export default function CreateGame() {
   const { t } = useI18n()
   const titleId = useId()
   const passwordId = useId()
+  const [manualName, setManualName] = useState('')
+  const [manualError, setManualError] = useState<string | null>(null)
   const minParticipants = validationRules.game.minParticipants
   const {
     title,
@@ -27,12 +29,13 @@ export default function CreateGame() {
     closePicker,
     handlePickerConfirm,
     selectedPeople,
-    selectedIds,
+    selectedDirectoryIds,
     participantCount,
     handleSubmit,
     loading,
     error,
     removeSelectedPerson,
+    addManualParticipant,
   } = useCreateGameForm(t('brand.title'))
   const hasSelection = participantCount > 0
 
@@ -79,6 +82,35 @@ export default function CreateGame() {
                 <p className="text-sm text-white/70">{t('create.noParticipantsSelected')}</p>
               )}
             </div>
+            <div className="space-y-3">
+              <div className="flex flex-wrap gap-2">
+                <Input
+                  value={manualName}
+                  onChange={e => {
+                    setManualName(e.target.value)
+                    setManualError(null)
+                  }}
+                  placeholder={t('admin.personPlaceholder')}
+                />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={() => {
+                    const err = addManualParticipant(manualName)
+                    if (err) {
+                      setManualError(err)
+                      return
+                    }
+                    setManualName('')
+                    setManualError(null)
+                  }}
+                  disabled={!manualName.trim()}
+                >
+                  {t('buttons.add')}
+                </Button>
+              </div>
+              {manualError && <p className="text-red-300 text-sm">{manualError}</p>}
+            </div>
           </FormField>
           {error && <p className="text-red-300 text-sm">{error}</p>}
           <Button type="submit" disabled={loading || participantCount < minParticipants}>{loading ? t('buttons.creating') : t('buttons.create')}</Button>
@@ -88,7 +120,7 @@ export default function CreateGame() {
         open={pickerOpen}
         onClose={closePicker}
         onConfirm={handlePickerConfirm}
-        initialSelected={selectedIds}
+        initialSelected={selectedDirectoryIds}
       />
     </Layout>
   )

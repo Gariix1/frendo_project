@@ -17,7 +17,11 @@ export default function Button({ variant = 'primary', className = '', children, 
     styles =
       'text-slate-100 border border-white/15 bg-gradient-to-br from-white/12 to-white/4 shadow-[inset_0_1px_0_rgba(255,255,255,0.45),0_14px_28px_rgba(2,6,23,0.6)] hover:bg-white/20 hover:-translate-y-0.5'
   }
-  const content: ReactNode =
-    typeof children === 'string' ? <AnimatedText keyProp={children}>{children}</AnimatedText> : children
+  const shouldAnimate = typeof children === 'string' || typeof children === 'number'
+  const content: ReactNode = shouldAnimate ? (
+    <AnimatedText watch={String(children)}>{children}</AnimatedText>
+  ) : (
+    children
+  )
   return <button className={`${base} ${styles} ${className}`} {...props}>{content}</button>
 }

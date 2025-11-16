@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import Modal from './Modal'
 import Button from './Button'
 import { api } from '../lib/api'
@@ -26,9 +26,18 @@ export default function PeoplePicker({ open, onClose, onConfirm, initialSelected
   const [query, setQuery] = useState('')
   const [selected, setSelected] = useState<Record<string, boolean>>({})
 
-  useEffect(() => {
-    (async () => { try { setPeople(await api.listPeople()) } catch {} })()
+  const loadPeople = useCallback(async () => {
+    try {
+      setPeople(await api.listPeople())
+    } catch {
+      /* ignore */
+    }
   }, [])
+
+  useEffect(() => {
+    if (!open) return
+    loadPeople()
+  }, [open, loadPeople])
 
   useEffect(() => {
     if (!open) return

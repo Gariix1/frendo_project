@@ -11,7 +11,7 @@ import Input from '../components/Input'
 import FormField from '../components/FormField'
 import { useI18n } from '../i18n/I18nProvider'
 import SectionHeader from '../components/SectionHeader'
-import GameCard from '../components/GameCard'
+import GameCard, { GameCardStatus } from '../components/GameCard'
 import ParticipantRow from '../components/ParticipantRow'
 import FormSection from '../components/FormSection'
 import CardSurface from '../components/CardSurface'
@@ -281,8 +281,8 @@ export default function AdminDashboard() {
         <div className="mt-3 space-y-3">
           {games.map(g => {
             const meta = t('admin.gameMeta', { count: g.participant_count, date: new Date(g.created_at).toLocaleString() })
-            const statuses = [
-              { label: g.active ? t('status.active') : t('status.inactive'), variant: g.active ? 'active' : 'inactive' as const },
+            const statuses: GameCardStatus[] = [
+              { label: g.active ? t('status.active') : t('status.inactive'), variant: g.active ? 'active' : 'inactive' },
             ]
             if (g.any_revealed) {
               statuses.push({ label: t('status.revealed'), variant: 'revealed' })

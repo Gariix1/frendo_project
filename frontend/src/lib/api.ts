@@ -1,5 +1,10 @@
 const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:8000'
 
+type CreateGameOptions = {
+  personIds?: string[]
+  participants?: string[]
+}
+
 async function request(path: string, init?: RequestInit) {
   const res = await fetch(`${API_BASE}${path}`, {
     headers: { 'Content-Type': 'application/json', ...(init?.headers || {}) },
@@ -38,11 +43,16 @@ async function request(path: string, init?: RequestInit) {
 }
 
 export const api = {
-  createGame: (title: string, adminPassword: string, participants: string[]) =>
-    request('/api/games', { method: 'POST', body: JSON.stringify({ title, admin_password: adminPassword, participants }) }),
-
-  createGameByPeople: (title: string, adminPassword: string, personIds: string[]) =>
-    request('/api/games', { method: 'POST', body: JSON.stringify({ title, admin_password: adminPassword, person_ids: personIds }) }),
+  createGame: (title: string, adminPassword: string, options: CreateGameOptions) =>
+    request('/api/games', {
+      method: 'POST',
+      body: JSON.stringify({
+        title,
+        admin_password: adminPassword,
+        person_ids: options.personIds || [],
+        participants: options.participants || [],
+      }),
+    }),
 
   getStatus: (gameId: string, adminPassword: string) =>
     request(`/api/games/${gameId}`, { headers: { 'X-Admin-Password': adminPassword } }),
