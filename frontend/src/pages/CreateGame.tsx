@@ -34,9 +34,24 @@ export default function CreateGame() {
 
   return (
     <Layout>
+      <section className="hero-card p-8">
+        <div className="hero-card__content space-y-4 max-w-2xl">
+          <p className="text-sm uppercase tracking-[0.4em] text-white/70">{t('brand.title')}</p>
+          <h1 className="text-4xl md:text-5xl font-semibold text-white drop-shadow-lg">{t('create.title')}</h1>
+          <p className="text-base md:text-lg text-white/80">
+            {t('create.heroCopy', { defaultValue: 'Organiza el intercambio perfecto con un tablero moderno, enlaces mágicos y una presentación digna de clay art.' })}
+          </p>
+          <div className="flex flex-wrap gap-3">
+            <Button onClick={openPicker} type="button">
+              {t('create.pickFromDirectory')}
+            </Button>
+          </div>
+        </div>
+        <div className="hero-card__visual" aria-hidden />
+      </section>
+
       <GlassCard>
-        <h1 className="text-2xl font-semibold mb-4">{t('create.title')}</h1>
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-6">
           <FormField label={t('create.form.title')} htmlFor={titleId}>
             <Input id={titleId} value={title} onChange={e=>setTitle(e.target.value)} />
           </FormField>
@@ -52,10 +67,10 @@ export default function CreateGame() {
               </div>
             }
           >
-            <div className="rounded-2xl border border-white/15 bg-white/5 p-3 space-y-2">
-              <p className="text-xs uppercase tracking-wide text-slate-300">{t('create.selectionSummary')}</p>
+            <div className="rounded-[28px] border border-white/10 bg-white/5 p-4 space-y-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.4)]">
+              <p className="text-xs uppercase tracking-wide text-white/70">{t('create.selectionSummary')}</p>
               {hasSelection ? (
-                <div className="flex flex-wrap gap-2">
+                <div className="flex flex-wrap gap-3">
                   {selectedPeople.map(person => (
                     <Chip
                       key={person.id}
@@ -66,7 +81,7 @@ export default function CreateGame() {
                   ))}
                 </div>
               ) : (
-                <p className="text-sm text-slate-400">{t('create.noParticipantsSelected')}</p>
+                <p className="text-sm text-white/70">{t('create.noParticipantsSelected')}</p>
               )}
             </div>
           </FormField>

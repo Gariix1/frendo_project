@@ -4,6 +4,7 @@
 
 :root {
   --glass-bg: rgba(255, 255, 255, 0.08);
+  --clay-bg: #050816;
   /* Palette */
   --c-primary: #7FCE00; /* Yellow Green */
   --c-light: #FFFCD9;   /* Light Yellow */
@@ -15,13 +16,79 @@
 /* Base + responsiveness helpers */
 html, body, #root { height: 100%; }
 /* Prevent background "tear" on overscroll and keep gradient visible */
-html { background-color: #020617; /* slate-950 fallback */ }
+html { background-color: var(--clay-bg); }
 body {
   font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Inter, Noto Sans, Ubuntu, Cantarell, Helvetica Neue, Arial, "Apple Color Emoji", "Segoe UI Emoji";
   min-height: 100dvh;
   overscroll-behavior-y: none;
   overscroll-behavior-x: none;
   scrollbar-gutter: stable both-edges;
+  background-color: var(--clay-bg);
+  color: white;
 }
 
 #root { min-height: 100dvh; }
+
+.hero-card {
+  position: relative;
+  border-radius: 40px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.04);
+  box-shadow: 35px 35px 70px rgba(1, 5, 21, 0.55), -15px -15px 35px rgba(255, 255, 255, 0.08);
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  overflow: hidden;
+}
+
+.hero-card__content {
+  position: relative;
+  z-index: 1;
+}
+
+.hero-card__visual {
+  position: relative;
+  flex: 1;
+  min-height: 180px;
+}
+
+.hero-card__visual::before {
+  content: '';
+  position: absolute;
+  top: 10%;
+  left: 50%;
+  transform: translateX(-50%);
+  width: clamp(12rem, 40vw, 18rem);
+  height: clamp(12rem, 40vw, 18rem);
+  border-radius: 45%;
+  background: rgba(127, 206, 0, 0.3);
+  filter: blur(80px);
+}
+
+.hero-card__visual::after {
+  content: '';
+  position: absolute;
+  bottom: 20%;
+  right: 10%;
+  width: clamp(6rem, 20vw, 10rem);
+  height: clamp(6rem, 20vw, 10rem);
+  border-radius: 35px;
+  background: rgba(255, 255, 255, 0.08);
+  box-shadow: 20px 25px 60px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.25);
+}
+
+@media (min-width: 1024px) {
+  .hero-card {
+    flex-direction: row;
+    padding: 3rem 3.5rem;
+  }
+
+  .hero-card__content {
+    flex: 1.4;
+  }
+
+  .hero-card__visual {
+    min-height: 260px;
+    flex: 0.9;
+  }
+}
