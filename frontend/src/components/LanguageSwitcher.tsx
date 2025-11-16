@@ -6,26 +6,22 @@ type Locale = 'es' | 'en'
 type Props = {
   value: Locale
   onChange: (locale: Locale) => void
+  className?: string
 }
 
 const options: Locale[] = ['es', 'en']
 
-export default function LanguageSwitcher({ value, onChange }: Props) {
+export default function LanguageSwitcher({ value, onChange, className = '' }: Props) {
   const toggle = () => onChange(value === 'es' ? 'en' : 'es')
 
   return (
-    <div
-      className="relative flex items-center gap-1 rounded-full border border-white/15 bg-gradient-to-br from-white/12 to-white/3 p-0.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.4),0_10px_20px_rgba(0,0,0,0.4)] min-w-[96px] cursor-pointer select-none"
+    <button
+      type="button"
       onClick={toggle}
-      onKeyDown={(e) => {
-        if (e.key === 'Enter' || e.key === ' ') {
-          e.preventDefault()
-          toggle()
-        }
-      }}
-      role="group"
-      tabIndex={0}
-      aria-label="Language switch"
+      className={`relative flex items-center gap-1 rounded-full border border-white/15 bg-gradient-to-br from-white/12 to-white/3 p-0.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.4),0_10px_20px_rgba(0,0,0,0.4)] min-w-[96px] select-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 ${className}`}
+      role="switch"
+      aria-checked={value === 'en'}
+      aria-label="Cambiar idioma"
     >
       <div
         className="absolute top-0.5 bottom-0.5 w-[50%] rounded-full bg-gradient-to-br from-[#b4ff4c] via-[#9BFF3D] to-[#74C000] shadow-[inset_0_2px_0_rgba(255,255,255,0.7),0_12px_25px_rgba(127,206,0,0.45)] transition-transform duration-300 ease-out"
@@ -42,6 +38,6 @@ export default function LanguageSwitcher({ value, onChange }: Props) {
           <AnimatedText watch={`locale-${locale}`}>{locale.toUpperCase()}</AnimatedText>
         </span>
       ))}
-    </div>
+    </button>
   )
 }

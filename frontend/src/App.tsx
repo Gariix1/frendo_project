@@ -9,7 +9,13 @@ export default function App() {
   return (
     <div className="min-h-dvh relative">
       <NavBar />
-      <main className="relative z-10 px-4 pt-24 pb-8">
+      <main
+        className="relative z-10 px-4"
+        style={{
+          paddingTop: 'calc(var(--nav-top-offset, 5.5rem) + 1.5rem)',
+          paddingBottom: 'calc(var(--nav-bottom-offset, 0rem) + 1.5rem)',
+        }}
+      >
         <Routes>
           <Route path="/" element={<CreateGame />} />
           <Route path="/admin" element={<AdminDashboard />} />

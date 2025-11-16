@@ -5,6 +5,8 @@
 :root {
   --glass-bg: rgba(255, 255, 255, 0.08);
   --clay-bg: #050816;
+  --nav-top-offset: 5.5rem;
+  --nav-bottom-offset: 0px;
   /* Palette */
   --c-primary: #7FCE00; /* Yellow Green */
   --c-light: #FFFCD9;   /* Light Yellow */
