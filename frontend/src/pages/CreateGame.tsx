@@ -9,6 +9,7 @@ import { useCreateGameForm } from '../hooks/useCreateGameForm'
 import FormField from '../components/FormField'
 import Chip from '../components/Chip'
 import HeroCard from '../components/HeroCard'
+import AnimatedText from '../components/AnimatedText'
 import { validationRules } from '../lib/validation'
 
 export default function CreateGame() {
@@ -38,10 +39,10 @@ export default function CreateGame() {
   return (
     <Layout>
       <HeroCard
-        eyebrow={t('brand.title')}
-        title={t('create.title')}
-        description={t('create.heroCopy', { defaultValue: 'Organiza el intercambio perfecto con un tablero moderno, enlaces mágicos y una presentación digna de clay art.' })}
-        actions={<Button onClick={openPicker} type="button">{t('create.pickFromDirectory')}</Button>}
+        eyebrow={<AnimatedText>{t('brand.title')}</AnimatedText>}
+        title={<AnimatedText>{t('create.title')}</AnimatedText>}
+        description={<AnimatedText watch="create-heroCopy">{t('create.heroCopy', { defaultValue: 'Organiza el intercambio perfecto con un tablero moderno, enlaces mágicos y una presentación digna de clay art.' })}</AnimatedText>}
+        actions={<Button onClick={openPicker} type="button"><AnimatedText>{t('create.pickFromDirectory')}</AnimatedText></Button>}
       />
 
       <GlassCard>

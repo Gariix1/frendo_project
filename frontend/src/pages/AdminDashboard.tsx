@@ -18,6 +18,7 @@ import CardSurface from '../components/CardSurface'
 import RenameDialog from '../components/RenameDialog'
 import ConfirmDialog from '../components/ConfirmDialog'
 import HeroCard from '../components/HeroCard'
+import AnimatedText from '../components/AnimatedText'
 import { validators, formatValidationError, normalizeWhitespace } from '../lib/validation'
 
 type Game = { game_id: string; title: string; created_at: string; any_revealed: boolean; active: boolean; participant_count: number }
@@ -27,8 +28,8 @@ export default function AdminDashboard() {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const { success, error: toastError } = useToast()
+  const { t, locale } = useI18n()
   const { alert } = useModal()
-  const { t } = useI18n()
   const [passwords, setPasswords] = useState<Record<string,string>>({})
   const [masterPassword, setMasterPassword] = useState('')
   const [newPersonName, setNewPersonName] = useState('')
@@ -239,9 +240,9 @@ export default function AdminDashboard() {
   return (
     <Layout>
       <HeroCard
-        eyebrow={t('admin.title')}
-        title={t('admin.dashboardHeroTitle')}
-        description={t('admin.dashboardHeroDescription', { games: games.length, people: activePeople })}
+        eyebrow={<AnimatedText>{t('admin.title')}</AnimatedText>}
+        title={<AnimatedText>{t('admin.dashboardHeroTitle')}</AnimatedText>}
+        description={<AnimatedText watch={`${games.length}-${activePeople}`}>{t('admin.dashboardHeroDescription', { games: games.length, people: activePeople })}</AnimatedText>}
         actions={(
           <>
             <Button onClick={() => navigate('/')}>{t('buttons.create')}</Button>

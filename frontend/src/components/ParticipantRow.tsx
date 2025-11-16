@@ -1,5 +1,6 @@
 import Button from './Button'
 import StatusBadge from './StatusBadge'
+import AnimatedText from './AnimatedText'
 
 type Props = {
   name: string
@@ -24,11 +25,15 @@ export default function ParticipantRow({
     <div className="flex items-center justify-between gap-2 px-2 py-1 rounded-2xl bg-white/5 border border-white/15">
       <div className="flex-1 min-w-0 flex flex-col gap-1">
         <div className="flex items-center gap-2 flex-wrap">
-          <span className="font-medium">{name}</span>
+          <span className="font-medium">
+            <AnimatedText watch={name}>{name}</AnimatedText>
+          </span>
           <StatusBadge label={status === 'active' ? 'active' : 'inactive'} variant={status} />
           {secondaryStatus && <StatusBadge label={secondaryStatus} variant={secondaryStatus === 'viewed' ? 'viewed' : 'revealed'} />}
         </div>
-        {description && <div className="text-xs text-white/70 truncate">{description}</div>}
+        {description && <div className="text-xs text-white/70 truncate">
+          <AnimatedText watch={`description-${name}`}>{description}</AnimatedText>
+        </div>}
         {inlineContent && <div>{inlineContent}</div>}
       </div>
       <div className="flex items-center gap-2 flex-wrap">

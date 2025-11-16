@@ -1,4 +1,5 @@
 import React from 'react'
+import AnimatedText from './AnimatedText'
 
 type Locale = 'es' | 'en'
 
@@ -38,7 +39,7 @@ export default function LanguageSwitcher({ value, onChange }: Props) {
             value === locale ? 'text-slate-950' : 'text-white/70'
           }`}
         >
-          {locale.toUpperCase()}
+          <AnimatedText watch={`locale-${locale}`}>{locale.toUpperCase()}</AnimatedText>
         </span>
       ))}
     </div>

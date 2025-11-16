@@ -1,9 +1,9 @@
 import { ReactNode } from 'react'
 
 type Props = {
-  eyebrow?: string
-  title: string
-  description?: string
+  eyebrow?: ReactNode
+  title: ReactNode
+  description?: ReactNode
   actions?: ReactNode
   visual?: ReactNode
   className?: string
@@ -24,4 +24,3 @@ export default function HeroCard({ eyebrow, title, description, actions, visual,
     </section>
   )
 }
-

@@ -5,6 +5,7 @@ import Input from './Input'
 import StatusBadge from './StatusBadge'
 import BadgeGroup from './BadgeGroup'
 import { useI18n } from '../i18n/I18nProvider'
+import AnimatedText from './AnimatedText'
 
 type Participant = { id: string; name: string; token: string; active: boolean; viewed: boolean }
 
@@ -35,7 +36,9 @@ export default function ManageParticipantModal({ open, onClose, participant, can
           {participant.viewed && <StatusBadge label={t('status.viewed')} variant="viewed" />}
         </BadgeGroup>
         <div>
-          <label className="block text-sm mb-1">{t('manage.nameLabel')}</label>
+          <label className="block text-sm mb-1">
+            <AnimatedText>{t('manage.nameLabel')}</AnimatedText>
+          </label>
           <Input value={name} onChange={e=>setName(e.target.value)} />
         </div>
         <div className="flex items-center gap-2 flex-wrap">
@@ -44,7 +47,7 @@ export default function ManageParticipantModal({ open, onClose, participant, can
           {canRemove && <Button variant="accent" onClick={async () => { setLoading(true); await onRemove(); setLoading(false) }}>{t('buttons.remove')}</Button>}
           <Button variant="ghost" onClick={onClose}>{t('buttons.close')}</Button>
         </div>
-        {canRemove && <p className="text-xs text-slate-300">{t('manage.removeHelp')}</p>}
+        {canRemove && <p className="text-xs text-slate-300"><AnimatedText>{t('manage.removeHelp')}</AnimatedText></p>}
       </div>
     </Modal>
   )

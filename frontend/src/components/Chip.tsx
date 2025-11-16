@@ -1,3 +1,5 @@
+import AnimatedText from './AnimatedText'
+
 type Props = {
   label: string
   onRemove?: () => void
@@ -8,7 +10,9 @@ type Props = {
 export default function Chip({ label, onRemove, removeLabel, className = '' }: Props) {
   return (
     <span className={`inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3 py-1.5 text-sm text-slate-100 ${className}`}>
-      <span className="truncate">{label}</span>
+      <span className="truncate">
+        <AnimatedText watch={label}>{label}</AnimatedText>
+      </span>
       {onRemove && (
         <button
           type="button"

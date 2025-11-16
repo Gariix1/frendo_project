@@ -1,3 +1,5 @@
+import AnimatedText from './AnimatedText'
+
 type Variant = 'active' | 'inactive' | 'revealed' | 'viewed'
 
 type Props = {
@@ -17,7 +19,7 @@ export default function StatusBadge({ label, variant, className = '' }: Props) {
   const styles = variantClasses[variant]
   return (
     <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold border ${styles} ${className}`}>
-      {label}
+      <AnimatedText watch={`${variant}-${label}`}>{label}</AnimatedText>
     </span>
   )
 }

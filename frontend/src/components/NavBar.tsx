@@ -2,6 +2,7 @@ import { Link, useLocation } from 'react-router-dom'
 import { useEffect, useMemo, useRef, useState, useCallback } from 'react'
 import { useI18n } from '../i18n/I18nProvider'
 import LanguageSwitcher from './LanguageSwitcher'
+import AnimatedText from './AnimatedText'
 
 export default function NavBar() {
   const { pathname } = useLocation()
@@ -83,7 +84,7 @@ export default function NavBar() {
           : 'text-white/80 hover:text-white'
       }`}
     >
-      {item.label}
+      <AnimatedText watch={item.label}>{item.label}</AnimatedText>
     </Link>
   )
 
@@ -91,7 +92,9 @@ export default function NavBar() {
     <div className={`fixed top-0 inset-x-0 z-40 transition-transform duration-300 ${hidden ? '-translate-y-full' : 'translate-y-0'}`}>
       <div className="max-w-3xl mx-auto px-4" style={{ paddingTop: 'calc(env(safe-area-inset-top) + 0.5rem)' }}>
         <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl shadow-xl px-3 sm:px-4 py-2 flex items-center justify-between">
-          <Link to="/" className="font-semibold tracking-wide">{t('brand.title')}</Link>
+          <Link to="/" className="font-semibold tracking-wide">
+            <AnimatedText watch={t('brand.title')}>{t('brand.title')}</AnimatedText>
+          </Link>
           <nav ref={navRef} className="relative flex items-center gap-1 sm:gap-2 text-sm whitespace-nowrap overflow-hidden">
             {highlight && (
               <span

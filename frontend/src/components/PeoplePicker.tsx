@@ -4,6 +4,7 @@ import Button from './Button'
 import { api } from '../lib/api'
 import { useI18n } from '../i18n/I18nProvider'
 import { validationRules } from '../lib/validation'
+import AnimatedText from './AnimatedText'
 
 type Person = { id: string; name: string; active: boolean }
 
@@ -58,13 +59,15 @@ export default function PeoplePicker({ open, onClose, onConfirm, initialSelected
               checked={!!selected[p.id]}
               onChange={e=> setSelected(prev => ({ ...prev, [p.id]: e.target.checked }))}
             />
-            <span>{p.name}</span>
+            <span><AnimatedText watch={`picker-${p.id}-${p.name}`}>{p.name}</AnimatedText></span>
           </label>
         ))}
-        {filtered.length === 0 && <div className="text-sm text-slate-300">{t('peoplePicker.noResults')}</div>}
+        {filtered.length === 0 && <div className="text-sm text-slate-300"><AnimatedText>{t('peoplePicker.noResults')}</AnimatedText></div>}
       </div>
       <div className="flex items-center justify-between">
-        <span className="text-sm text-slate-300">{t('common.selectedCount', { count })}</span>
+        <span className="text-sm text-slate-300">
+          <AnimatedText watch={`selected-${count}`}>{t('common.selectedCount', { count })}</AnimatedText>
+        </span>
         <div className="flex items-center gap-2">
           <Button variant="ghost" onClick={onClose}>{t('buttons.cancel')}</Button>
           <Button
