@@ -3,6 +3,7 @@ import Modal from './Modal'
 import Button from './Button'
 import Input from './Input'
 import { useI18n } from '../i18n/I18nProvider'
+import DialogActions from './DialogActions'
 
 type Props = {
   open: boolean
@@ -31,10 +32,10 @@ export default function RenameDialog({ open, title, initialValue, onSubmit, onCl
     <Modal open={open} onClose={onClose} title={title}>
       <div className="space-y-4">
         <Input value={value} onChange={e => setValue(e.target.value)} />
-        <div className="flex items-center gap-2 justify-end">
+        <DialogActions>
           <Button variant="ghost" onClick={onClose}>{t('buttons.cancel')}</Button>
           <Button onClick={handleSave} disabled={loading}>{t('buttons.save')}</Button>
-        </div>
+        </DialogActions>
       </div>
     </Modal>
   )

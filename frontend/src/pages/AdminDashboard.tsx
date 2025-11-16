@@ -19,6 +19,7 @@ import RenameDialog from '../components/RenameDialog'
 import ConfirmDialog from '../components/ConfirmDialog'
 import HeroCard from '../components/HeroCard'
 import AnimatedText from '../components/AnimatedText'
+import StatCard from '../components/StatCard'
 import { validators, formatValidationError, normalizeWhitespace } from '../lib/validation'
 
 type Game = { game_id: string; title: string; created_at: string; any_revealed: boolean; active: boolean; participant_count: number }
@@ -252,19 +253,20 @@ export default function AdminDashboard() {
       />
       <GlassCard className="mt-6">
         <div className="grid gap-4 sm:grid-cols-3">
-          <div className="rounded-3xl border border-white/10 bg-white/5 p-4 shadow-lg space-y-1">
-            <p className="text-sm uppercase tracking-wide text-white/60">{t('admin.stats.totalGames')}</p>
-            <p className="text-3xl font-semibold text-white">{games.length}</p>
-          </div>
-          <div className="rounded-3xl border border-primary/30 bg-primary/10 p-4 shadow-lg space-y-1">
-            <p className="text-sm uppercase tracking-wide text-primary/80">{t('admin.stats.activeGames')}</p>
-            <p className="text-3xl font-semibold text-white">{activeGames}</p>
-          </div>
-          <div className="rounded-3xl border border-white/10 bg-white/5 p-4 shadow-lg space-y-1">
-            <p className="text-sm uppercase tracking-wide text-white/60">{t('admin.stats.activePeople')}</p>
-            <p className="text-3xl font-semibold text-white">{activePeople}</p>
-            <p className="text-xs text-white/60">{t('admin.stats.totalParticipants', { count: totalParticipants })}</p>
-          </div>
+          <StatCard
+            label={t('admin.stats.totalGames')}
+            value={<AnimatedText watch={`stats-total-${games.length}`}>{games.length}</AnimatedText>}
+          />
+          <StatCard
+            label={t('admin.stats.activeGames')}
+            value={<AnimatedText watch={`stats-active-${activeGames}`}>{activeGames}</AnimatedText>}
+            variant="highlight"
+          />
+          <StatCard
+            label={t('admin.stats.activePeople')}
+            value={<AnimatedText watch={`stats-people-${activePeople}`}>{activePeople}</AnimatedText>}
+            helperText={<AnimatedText watch={`stats-totalParticipants-${totalParticipants}`}>{t('admin.stats.totalParticipants', { count: totalParticipants })}</AnimatedText>}
+          />
         </div>
       </GlassCard>
 

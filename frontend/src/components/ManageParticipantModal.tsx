@@ -6,6 +6,7 @@ import StatusBadge from './StatusBadge'
 import BadgeGroup from './BadgeGroup'
 import { useI18n } from '../i18n/I18nProvider'
 import AnimatedText from './AnimatedText'
+import DialogActions from './DialogActions'
 
 type Participant = { id: string; name: string; token: string; active: boolean; viewed: boolean }
 
@@ -41,12 +42,12 @@ export default function ManageParticipantModal({ open, onClose, participant, can
           </label>
           <Input value={name} onChange={e=>setName(e.target.value)} />
         </div>
-        <div className="flex items-center gap-2 flex-wrap">
+        <DialogActions wrap className="items-center">
           <Button onClick={async () => { if (name.trim() && name.trim() !== participant.name) { setLoading(true); await onRename(name.trim()); setLoading(false) } }} disabled={loading}>{t('buttons.save')}</Button>
           <Button variant="accent" onClick={async () => { setLoading(true); await onToggle(); setLoading(false) }}>{participant.active ? t('buttons.deactivate') : t('buttons.reactivate')}</Button>
           {canRemove && <Button variant="accent" onClick={async () => { setLoading(true); await onRemove(); setLoading(false) }}>{t('buttons.remove')}</Button>}
           <Button variant="ghost" onClick={onClose}>{t('buttons.close')}</Button>
-        </div>
+        </DialogActions>
         {canRemove && <p className="text-xs text-slate-300"><AnimatedText>{t('manage.removeHelp')}</AnimatedText></p>}
       </div>
     </Modal>

@@ -18,6 +18,7 @@ import ParticipantRow from '../components/ParticipantRow'
 import FormSection from '../components/FormSection'
 import ConfirmDialog from '../components/ConfirmDialog'
 import CardSurface from '../components/CardSurface'
+import Input from '../components/Input'
 import { validators, formatValidationError, normalizeWhitespace } from '../lib/validation'
 
 type Person = { id: string; name: string; active: boolean }
@@ -194,7 +195,7 @@ export default function GameLinks() {
           description={t('labels.adminPassword')}
           action={<Button onClick={fetchLinks} disabled={!adminPassword || loading}>{loading ? t('buttons.loading') : t('buttons.loadLinks')}</Button>}
         >
-          <input type="password" value={adminPassword} onChange={e=>setAdminPassword(e.target.value)} className="w-full px-3 py-2 rounded-xl bg-white/10 border border-light/30 text-slate-100 placeholder:text-slate-300/60 focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary/50" />
+          <Input type="password" value={adminPassword} onChange={e=>setAdminPassword(e.target.value)} placeholder={t('labels.adminPassword')} />
           <div className="flex flex-wrap items-center gap-2">
             <Button variant="ghost" onClick={() => doDraw(false)} disabled={!adminPassword || loading || anyRevealed}>{assignmentVersion && assignmentVersion > 0 ? t('draw.redraw') : t('draw.draw')}</Button>
             {anyRevealed && (

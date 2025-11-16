@@ -13,6 +13,7 @@ export default function NavBar() {
   const raf = useRef<number | null>(null)
 
   useEffect(() => {
+    const hideThreshold = 140
     lastY.current = window.scrollY || 0
     const onScroll = () => {
       if (raf.current) return
@@ -20,11 +21,11 @@ export default function NavBar() {
         const y = window.scrollY || 0
         const dy = y - lastY.current
         // Show when near top or scrolling up; hide when scrolling down past threshold
-        if (y < 24) {
+        if (y < 48) {
           setHidden(false)
-        } else if (dy > 6 && y > 64) {
+        } else if (dy > 10 && y > hideThreshold) {
           setHidden(true)
-        } else if (dy < -6) {
+        } else if (dy < -10) {
           setHidden(false)
         }
         lastY.current = y
@@ -37,6 +38,7 @@ export default function NavBar() {
       if (raf.current) cancelAnimationFrame(raf.current)
     }
   }, [])
+
   const navItems = useMemo(() => [
     { to: '/', label: t('nav.create') },
     { to: '/admin', label: t('nav.admin') },
@@ -53,6 +55,7 @@ export default function NavBar() {
     containerRef: mobileContainerRef,
     registerItem: registerMobileItem,
   } = useSlidingHighlight(activeKey)
+
   const desktopWrapperRef = useRef<HTMLDivElement | null>(null)
   const mobileWrapperRef = useRef<HTMLDivElement | null>(null)
 
