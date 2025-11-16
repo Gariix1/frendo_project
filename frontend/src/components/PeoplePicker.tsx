@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import Modal from './Modal'
 import Button from './Button'
 import { api } from '../lib/api'
+import { useI18n } from '../i18n/I18nProvider'
 
 type Person = { id: string; name: string; active: boolean }
 
@@ -13,6 +14,7 @@ type Props = {
 }
 
 export default function PeoplePicker({ open, onClose, onConfirm, initialSelected = [] }: Props) {
+  const { t } = useI18n()
   const [people, setPeople] = useState<Person[]>([])
   const [query, setQuery] = useState('')
   const [selected, setSelected] = useState<Record<string, boolean>>({})
@@ -22,10 +24,11 @@ export default function PeoplePicker({ open, onClose, onConfirm, initialSelected
   }, [])
 
   useEffect(() => {
+    if (!open) return
     const sel: Record<string, boolean> = {}
-    initialSelected.forEach(id => sel[id] = true)
+    ;(initialSelected || []).forEach(id => sel[id] = true)
     setSelected(sel)
-  }, [initialSelected, open])
+  }, [open])
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase()
@@ -36,10 +39,10 @@ export default function PeoplePicker({ open, onClose, onConfirm, initialSelected
   const count = useMemo(() => Object.values(selected).filter(Boolean).length, [selected])
 
   return (
-    <Modal open={open} onClose={onClose} title="Pick Participants">
+    <Modal open={open} onClose={onClose} title={t('peoplePicker.title')}>
       <input
-        className="w-full px-3 py-2 rounded-xl bg-white/10 border border-white/20 focus:outline-none"
-        placeholder="Search people" value={query} onChange={e=>setQuery(e.target.value)}
+        className="w-full px-3 py-2 rounded-xl bg-white/10 border border-light/30 text-slate-100 placeholder:text-slate-300/60 focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary/50"
+        placeholder={t('peoplePicker.searchPlaceholder')} value={query} onChange={e=>setQuery(e.target.value)}
       />
       <div className="max-h-80 overflow-auto rounded-2xl border border-white/20 p-2 bg-white/5">
         {filtered.map(p => (
@@ -51,16 +54,15 @@ export default function PeoplePicker({ open, onClose, onConfirm, initialSelected
             <span>{p.name}</span>
           </label>
         ))}
-        {filtered.length === 0 && <div className="text-sm text-slate-300">No results.</div>}
+        {filtered.length === 0 && <div className="text-sm text-slate-300">{t('peoplePicker.noResults')}</div>}
       </div>
       <div className="flex items-center justify-between">
-        <span className="text-sm text-slate-300">Selected: {count}</span>
+        <span className="text-sm text-slate-300">{t('common.selectedCount', { count })}</span>
         <div className="flex items-center gap-2">
-          <Button variant="ghost" onClick={onClose}>Cancel</Button>
-          <Button onClick={() => onConfirm(Object.keys(selected).filter(id => selected[id]))} disabled={count < 3}>Confirm</Button>
+          <Button variant="ghost" onClick={onClose}>{t('buttons.cancel')}</Button>
+          <Button onClick={() => onConfirm(Object.keys(selected).filter(id => selected[id]))} disabled={count < 3}>{t('buttons.confirm')}</Button>
         </div>
       </div>
     </Modal>
   )
 }
-

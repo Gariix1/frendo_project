@@ -5,9 +5,12 @@ import Button from '../components/Button'
 import Layout from '../components/Layout'
 import { api } from '../lib/api'
 import PeoplePicker from '../components/PeoplePicker'
+import Input from '../components/Input'
+import { useI18n } from '../i18n/I18nProvider'
 
 export default function CreateGame() {
-  const [title, setTitle] = useState('Secret Friend')
+  const { t } = useI18n()
+  const [title, setTitle] = useState('Amigo Secreto')
   const [password, setPassword] = useState('')
   const [pickerOpen, setPickerOpen] = useState(false)
   const [selectedIds, setSelectedIds] = useState<string[]>([])
@@ -19,7 +22,7 @@ export default function CreateGame() {
     e.preventDefault()
     setError(null)
     if (selectedIds.length < 3) {
-      setError('Pick at least 3 participants from the directory.')
+      setError(t('errors.pickAtLeast3'))
       return
     }
     setLoading(true)
@@ -28,7 +31,7 @@ export default function CreateGame() {
       try { localStorage.setItem(`adminpw:${res.game_id}`, password) } catch {}
       navigate(`/game/${res.game_id}/links`)
     } catch (err: any) {
-      setError(err.message || 'Failed to create game')
+      setError(err.message || t('errors.failedCreateGame'))
     } finally {
       setLoading(false)
     }
@@ -37,29 +40,28 @@ export default function CreateGame() {
   return (
     <Layout>
       <GlassCard>
-        <h1 className="text-2xl font-semibold mb-4">Create a Game</h1>
+        <h1 className="text-2xl font-semibold mb-4">{t('create.title')}</h1>
         <form onSubmit={onSubmit} className="space-y-4">
           <div>
-            <label className="block text-sm mb-1">Title</label>
-            <input value={title} onChange={e=>setTitle(e.target.value)} className="w-full px-3 py-2 rounded-xl bg-white/10 border border-white/20 focus:outline-none" />
+            <label className="block text-sm mb-1">{t('create.form.title')}</label>
+            <Input value={title} onChange={e=>setTitle(e.target.value)} />
           </div>
           <div>
-            <label className="block text-sm mb-1">Admin Password</label>
-            <input type="password" value={password} onChange={e=>setPassword(e.target.value)} className="w-full px-3 py-2 rounded-xl bg-white/10 border border-white/20 focus:outline-none" required />
+            <label className="block text-sm mb-1">{t('create.form.password')}</label>
+            <Input type="password" value={password} onChange={e=>setPassword(e.target.value)} required />
           </div>
           <div>
-            <label className="block text-sm mb-1">Participants</label>
+            <label className="block text-sm mb-1">{t('create.form.participants')}</label>
             <div className="flex items-center gap-2">
-              <Button type="button" variant="ghost" onClick={()=>setPickerOpen(true)}>Pick from directory</Button>
-              <span className="text-sm text-slate-300">Selected: {selectedIds.length}</span>
+              <Button type="button" variant="ghost" onClick={()=>setPickerOpen(true)}>{t('create.pickFromDirectory')}</Button>
+              <span className="text-sm text-slate-300">{t('common.selectedCount', { count: selectedIds.length })}</span>
             </div>
           </div>
           {error && <p className="text-red-300 text-sm">{error}</p>}
-          <Button type="submit" disabled={loading || selectedIds.length < 3}>{loading ? 'Creating.' : 'Create Game'}</Button>
+          <Button type="submit" disabled={loading || selectedIds.length < 3}>{loading ? t('buttons.creating') : t('buttons.create')}</Button>
         </form>
       </GlassCard>
       <PeoplePicker open={pickerOpen} onClose={()=>setPickerOpen(false)} onConfirm={(ids)=>{ setSelectedIds(ids); setPickerOpen(false) }} />
     </Layout>
   )
 }
-

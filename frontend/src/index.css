@@ -4,6 +4,12 @@
 
 :root {
   --glass-bg: rgba(255, 255, 255, 0.08);
+  /* Palette */
+  --c-primary: #7FCE00; /* Yellow Green */
+  --c-light: #FFFCD9;   /* Light Yellow */
+  --c-accent: #BC4C4C;  /* Bittersweet Shimmer */
+  --c-dark: #383725;    /* Drab Dark Brown */
+  --c-text: #1F1F1F;    /* Eerie Black */
 }
 
 /* Base + responsiveness helpers */
@@ -19,4 +25,3 @@ body {
 }
 
 #root { min-height: 100dvh; }
-

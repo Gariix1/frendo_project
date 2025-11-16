@@ -5,6 +5,8 @@ import Layout from '../components/Layout'
 import Button from '../components/Button'
 import { api } from '../lib/api'
 import { useModal } from '../components/ModalProvider'
+import { useToast } from '../components/ToastProvider'
+import Input from '../components/Input'
 import PeoplePicker from '../components/PeoplePicker'
 
 type Game = { game_id: string; title: string; created_at: string; any_revealed: boolean; active: boolean; participant_count: number }
@@ -13,6 +15,7 @@ type Person = { id: string; name: string; active: boolean }
 export default function AdminDashboard() {
   const navigate = useNavigate()
   const { confirm } = useModal()
+  const { success, error: toastError } = useToast()
   const [games, setGames] = useState<Game[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -50,8 +53,11 @@ export default function AdminDashboard() {
     try {
       await api.toggleGameActive(g.game_id, pw, !g.active)
       await load()
+      success(g.active ? 'Game deactivated' : 'Game reactivated')
     } catch (err: any) {
-      setError(err.message || 'Failed to toggle game')
+      const msg = err?.message || 'Failed to toggle game'
+      setError(msg)
+      toastError(msg)
     } finally {
       setLoading(false)
     }
@@ -67,8 +73,11 @@ export default function AdminDashboard() {
     try {
       await api.updateGameTitle(g.game_id, pw, title.trim())
       await load()
+      success('Title updated')
     } catch (err: any) {
-      setError(err.message || 'Failed to update title')
+      const msg = err?.message || 'Failed to update title'
+      setError(msg)
+      toastError(msg)
     } finally {
       setLoading(false)
     }
@@ -88,8 +97,11 @@ export default function AdminDashboard() {
     try {
       await api.deleteGame(g.game_id, pw)
       await load()
+      success('Game deleted')
     } catch (err: any) {
-      setError(err.message || 'Failed to delete game')
+      const msg = err?.message || 'Failed to delete game'
+      setError(msg)
+      toastError(msg)
     } finally {
       setLoading(false)
     }
@@ -106,8 +118,11 @@ export default function AdminDashboard() {
       setSelectedIds([])
       await load()
       navigate(`/game/${res.game_id}/links`)
+      success('Game created')
     } catch (err: any) {
-      setError(err.message || 'Failed to create game')
+      const msg = err?.message || 'Failed to create game'
+      setError(msg)
+      toastError(msg)
     } finally {
       setLoading(false)
     }
@@ -167,11 +182,11 @@ export default function AdminDashboard() {
         <div className="grid gap-3">
           <div>
             <label className="block text-sm mb-1">Title</label>
-            <input className="w-full px-3 py-2 rounded-xl bg-white/10 border border-white/20 focus:outline-none" value={newTitle} onChange={e=>setNewTitle(e.target.value)} />
+            <Input value={newTitle} onChange={e=>setNewTitle(e.target.value)} />
           </div>
           <div>
             <label className="block text-sm mb-1">Admin Password</label>
-            <input type="password" className="w-full px-3 py-2 rounded-xl bg-white/10 border border-white/20 focus:outline-none" value={newPassword} onChange={e=>setNewPassword(e.target.value)} />
+            <Input type="password" value={newPassword} onChange={e=>setNewPassword(e.target.value)} />
           </div>
           <div>
             <label className="block text-sm mb-1">Participants</label>
@@ -201,12 +216,12 @@ export default function AdminDashboard() {
                 <div className="sm:col-span-2">
                   <div className="font-medium flex items-center gap-2">
                     {g.title}
-                    <span className={`text-xs px-2 py-0.5 rounded-full ${g.active ? 'bg-emerald-600/30 text-emerald-200' : 'bg-slate-600/30 text-slate-200'}`}>{g.active ? 'active' : 'inactive'}</span>
+                    <span className={`text-xs px-2 py-0.5 rounded-full ${g.active ? 'bg-primary/15 text-primary border-primary/30 border' : 'bg-dark/40 text-light border-light/20 border'}`}>{g.active ? 'active' : 'inactive'}</span>
                     {g.any_revealed && <span className="text-xs px-2 py-0.5 rounded-full bg-amber-600/30 text-amber-200">revealed</span>}
                   </div>
                   <div className="text-xs opacity-80">{g.participant_count} participants · {new Date(g.created_at).toLocaleString()}</div>
                   <div className="mt-2">
-                    <input type="password" placeholder="Admin password" className="w-full px-3 py-2 rounded-xl bg-white/10 border border-white/20 focus:outline-none text-sm"
+                    <Input type="password" placeholder="Admin password" className="text-sm"
                       value={passwords[g.game_id] || ''}
                       onChange={e=>setPasswords(prev=>({...prev, [g.game_id]: e.target.value}))}
                     />
@@ -216,7 +231,7 @@ export default function AdminDashboard() {
                   <Link className="px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white text-center w-full" to={`/game/${g.game_id}/links`}>Open</Link>
                   <Button className="w-full" variant="ghost" onClick={() => renameTitle(g)}>Rename</Button>
                   <Button className="w-full" variant="ghost" onClick={() => toggleActive(g)}>{g.active ? 'Deactivate' : 'Reactivate'}</Button>
-                  <Button className="w-full" variant="ghost" onClick={() => deleteGame(g)}>Delete</Button>
+                  <Button className="w-full" variant="ghost" onClick={() => deleteGame(g)} className="" variant="accent">Delete</Button>
                 </div>
               </div>
             </div>
@@ -231,13 +246,13 @@ export default function AdminDashboard() {
         <div className="grid gap-3">
           <div>
             <label className="block text-sm mb-1">Master Password</label>
-            <input type="password" className="w-full px-3 py-2 rounded-xl bg-white/10 border border-white/20 focus:outline-none" value={masterPassword} onChange={e=>setMasterPassword(e.target.value)} />
+            <Input type="password" value={masterPassword} onChange={e=>setMasterPassword(e.target.value)} />
             {masterError && <p className="text-red-300 text-sm mt-1">{masterError}</p>}
           </div>
           <div className="flex items-end gap-2">
             <div className="flex-1">
               <label className="block text-sm mb-1">Add person</label>
-              <input className="w-full px-3 py-2 rounded-xl bg-white/10 border border-white/20 focus:outline-none" value={newPersonName} onChange={e=>setNewPersonName(e.target.value)} placeholder="Name" />
+              <Input value={newPersonName} onChange={e=>setNewPersonName(e.target.value)} placeholder="Name" />
             </div>
             <Button onClick={addPerson} disabled={loading || !newPersonName.trim()}>Add</Button>
           </div>
@@ -245,7 +260,7 @@ export default function AdminDashboard() {
             {people.map(p => (
               <div key={p.id} className="flex items-center justify-between gap-2 px-2 py-1">
                 <div className="flex items-center gap-2">
-                  <span className={`text-xs px-2 py-0.5 rounded-full ${p.active ? 'bg-emerald-600/30 text-emerald-200' : 'bg-slate-600/30 text-slate-200'}`}>{p.active ? 'active' : 'inactive'}</span>
+                  <span className={`text-xs px-2 py-0.5 rounded-full ${p.active ? 'bg-primary/15 text-primary border-primary/30 border' : 'bg-dark/40 text-light border-light/20 border'}`}>{p.active ? 'active' : 'inactive'}</span>
                   <span>{p.name}</span>
                 </div>
                 <div className="flex items-center gap-2">
@@ -260,5 +275,8 @@ export default function AdminDashboard() {
     </Layout>
   )
 }
+
+
+
 
 
