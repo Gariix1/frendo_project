@@ -6,10 +6,15 @@ import { useI18n } from '../i18n/I18nProvider'
 
 type Person = { id: string; name: string; active: boolean }
 
+type SelectionResult = {
+  ids: string[]
+  people: { id: string; name: string }[]
+}
+
 type Props = {
   open: boolean
   onClose: () => void
-  onConfirm: (ids: string[]) => void
+  onConfirm: (selection: SelectionResult) => void
   initialSelected?: string[]
 }
 
@@ -26,9 +31,9 @@ export default function PeoplePicker({ open, onClose, onConfirm, initialSelected
   useEffect(() => {
     if (!open) return
     const sel: Record<string, boolean> = {}
-    ;(initialSelected || []).forEach(id => sel[id] = true)
+    ;(initialSelected || []).forEach(id => { if (id) sel[id] = true })
     setSelected(sel)
-  }, [open])
+  }, [open, initialSelected])
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase()
@@ -60,7 +65,18 @@ export default function PeoplePicker({ open, onClose, onConfirm, initialSelected
         <span className="text-sm text-slate-300">{t('common.selectedCount', { count })}</span>
         <div className="flex items-center gap-2">
           <Button variant="ghost" onClick={onClose}>{t('buttons.cancel')}</Button>
-          <Button onClick={() => onConfirm(Object.keys(selected).filter(id => selected[id]))} disabled={count < 3}>{t('buttons.confirm')}</Button>
+          <Button
+            onClick={() => {
+              const selectedPeople = people.filter(p => selected[p.id])
+              onConfirm({
+                ids: selectedPeople.map(p => p.id),
+                people: selectedPeople.map(p => ({ id: p.id, name: p.name })),
+              })
+            }}
+            disabled={count < 3}
+          >
+            {t('buttons.confirm')}
+          </Button>
         </div>
       </div>
     </Modal>
