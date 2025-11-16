@@ -33,7 +33,7 @@ export default function I18nProvider({ children }: PropsWithChildren) {
       if (saved === 'es' || saved === 'en') return saved
     } catch {}
     const nav = (navigator.language || 'es').toLowerCase()
-    return nav.startsWith('es') ? 'es' : 'es' // default to ES
+    return nav.startsWith('es') ? 'es' : 'en' // default to ES if locale not ES
   }
 
   const [locale, setLocaleState] = useState<Locale>(detect())
@@ -63,4 +63,3 @@ export default function I18nProvider({ children }: PropsWithChildren) {
     </I18nContext.Provider>
   )
 }
-

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import GlassCard from '../components/GlassCard'
 import Button from '../components/Button'
@@ -11,12 +11,17 @@ import QrModal from '../components/QrModal'
 import { useI18n } from '../i18n/I18nProvider'
 import Tag from '../components/Tag'
 import ManageParticipantModal from '../components/ManageParticipantModal'
-import StatusPills from '../components/StatusPills'
 import CopyButton from '../components/CopyButton'
 import WhatsAppButton from '../components/WhatsAppButton'
+import ParticipantSelectRow from '../components/ParticipantSelectRow'
+import ParticipantRow from '../components/ParticipantRow'
+import FormSection from '../components/FormSection'
+import ConfirmDialog from '../components/ConfirmDialog'
+import CardSurface from '../components/CardSurface'
+import { validators, formatValidationError, normalizeWhitespace } from '../lib/validation'
 
 type Person = { id: string; name: string; active: boolean }
-type LinkItem = { name: string; link: string }
+type LinkItem = { participant_id: string; token: string; name: string; link: string }
 type Participant = { id: string; name: string; token: string; active: boolean; viewed: boolean }
 
 export default function GameLinks() {
@@ -38,6 +43,13 @@ export default function GameLinks() {
   const [qrTitle, setQrTitle] = useState<string>('QR')
   const [manageOpen, setManageOpen] = useState(false)
   const [manageTarget, setManageTarget] = useState<Participant | null>(null)
+  const [confirmForce, setConfirmForce] = useState(false)
+
+  const participantById = useMemo(() => {
+    const map = new Map<string, Participant>()
+    ;(participants || []).forEach(p => map.set(p.id, p))
+    return map
+  }, [participants])
 
   useEffect(() => {
     if (!gameId) return
@@ -67,7 +79,15 @@ export default function GameLinks() {
     }
   }
 
-  useEffect(() => { (async () => { try { setPeople(await api.listPeople()) } catch {} })() }, [])
+  const loadPeople = useCallback(async () => {
+    try {
+      setPeople(await api.listPeople())
+    } catch {
+      /* ignore */
+    }
+  }, [])
+
+  useEffect(() => { loadPeople() }, [loadPeople])
 
   const doDraw = async (force = false) => {
     if (!gameId) return
@@ -143,12 +163,19 @@ export default function GameLinks() {
 
   const rename = async (p: Participant, newNameOverride?: string) => {
     if (!gameId) return
-    const newName = newNameOverride ?? prompt(t('buttons.rename') + ':', p.name)
-    if (!newName || newName.trim() === p.name) return
+    const rawName = newNameOverride ?? prompt(t('buttons.rename') + ':', p.name)
+    if (!rawName) return
+    const validationError = validators.participantName(rawName)
+    if (validationError) {
+      toastError(formatValidationError(validationError, t))
+      return
+    }
+    const normalizedName = normalizeWhitespace(rawName)
+    if (normalizedName === p.name) return
     setError(null)
     setLoading(true)
     try {
-      await api.renameParticipant(gameId, adminPassword, p.id, newName.trim())
+      await api.renameParticipant(gameId, adminPassword, p.id, normalizedName)
       await fetchLinks()
     } catch (err: any) {
       setError(err.message || t('errors.failedRename'))
@@ -162,24 +189,16 @@ export default function GameLinks() {
   return (
     <Layout>
       <GlassCard>
-        <h1 className="text-2xl font-semibold mb-4">{t('sections.shareLinks')}</h1>
-        <div className="space-y-3">
-          <div>
-            <label className="block text-sm mb-1">{t('labels.adminPassword')}</label>
-            <input type="password" value={adminPassword} onChange={e=>setAdminPassword(e.target.value)} className="w-full px-3 py-2 rounded-xl bg-white/10 border border-light/30 text-slate-100 placeholder:text-slate-300/60 focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary/50" />
-          </div>
+        <FormSection
+          title={t('sections.shareLinks')}
+          description={t('labels.adminPassword')}
+          action={<Button onClick={fetchLinks} disabled={!adminPassword || loading}>{loading ? t('buttons.loading') : t('buttons.loadLinks')}</Button>}
+        >
+          <input type="password" value={adminPassword} onChange={e=>setAdminPassword(e.target.value)} className="w-full px-3 py-2 rounded-xl bg-white/10 border border-light/30 text-slate-100 placeholder:text-slate-300/60 focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary/50" />
           <div className="flex flex-wrap items-center gap-2">
-            <Button onClick={fetchLinks} disabled={!adminPassword || loading}>{loading ? t('buttons.loading') : t('buttons.loadLinks')}</Button>
             <Button variant="ghost" onClick={() => doDraw(false)} disabled={!adminPassword || loading || anyRevealed}>{assignmentVersion && assignmentVersion > 0 ? t('draw.redraw') : t('draw.draw')}</Button>
             {anyRevealed && (
-              <Button variant="accent" onClick={async () => {
-                const ok = await confirm({
-                  title: t('confirm.forceRedraw.title'),
-                  message: t('confirm.forceRedraw.message'),
-                  confirmText: t('confirm.forceRedraw.cta'),
-                })
-                if (ok) doDraw(true)
-              }} disabled={!adminPassword || loading}>{t('draw.forceRedraw')}</Button>
+              <Button variant="accent" onClick={() => setConfirmForce(true)} disabled={!adminPassword || loading}>{t('draw.forceRedraw')}</Button>
             )}
           </div>
           {assignmentVersion === 0 && (
@@ -189,40 +208,36 @@ export default function GameLinks() {
             <p className="text-amber-300 text-sm">{t('warnings.someRevealed')}</p>
           )}
           {error && <p className="text-red-300 text-sm">{error}</p>}
-        </div>
+        </FormSection>
       </GlassCard>
 
       {links && (
         <GlassCard>
           <h2 className="text-xl font-semibold mb-3">{t('sections.participants')}</h2>
-          <ul className="space-y-3">
-            {links.map((i) => {
-              const p = participants?.find(pp => pp.name === i.name)
+          <div className="space-y-3">
+            {links.map(link => {
+              const participant = participantById.get(link.participant_id) || null
               return (
-                <li key={i.link} className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 justify-between">
-                  <div className="flex-1 min-w-0">
-                    <div className="font-medium flex items-center gap-2 flex-wrap">
-                      <span className="truncate max-w-[16rem]">{i.name}</span>
-                      {p && (<StatusPills active={p.active} viewed={p.viewed} />)}
-                    </div>
-                    <div className="mt-1">
-                      <Tag text={i.link} onClick={() => copyText(i.link)} />
-                    </div>
-                  </div>
-                  <div className="flex flex-wrap items-center gap-2">
-                    <CopyButton text={i.link} />
-                    <WhatsAppButton name={i.name} link={i.link} />
-                    <Button variant="ghost" onClick={() => { setQrLink(i.link); setQrTitle(t('gameLinks.qrTitle', { name: i.name })); setQrOpen(true) }}>{t('buttons.qr')}</Button>
-                    {p && (
-                      <>
-                        <Button variant="ghost" onClick={() => { setManageTarget(p); setManageOpen(true) }}>{t('buttons.manage')}</Button>
-                      </>
-                    )}
-                  </div>
-                </li>
+                <ParticipantRow
+                  key={link.participant_id}
+                  name={link.name}
+                  status={participant?.active ? 'active' : 'inactive'}
+                  secondaryStatus={participant?.viewed ? 'viewed' : undefined}
+                  description={<Tag text={link.link} onClick={() => copyText(link.link)} />}
+                  rightContent={
+                    <>
+                      <CopyButton text={link.link} />
+                      <WhatsAppButton name={link.name} link={link.link} />
+                      <Button variant="ghost" onClick={() => { setQrLink(link.link); setQrTitle(t('gameLinks.qrTitle', { name: link.name })); setQrOpen(true) }}>{t('buttons.qr')}</Button>
+                      {participant && (
+                        <Button variant="ghost" onClick={() => { setManageTarget(participant); setManageOpen(true) }}>{t('buttons.manage')}</Button>
+                      )}
+                    </>
+                  }
+                />
               )
             })}
-          </ul>
+          </div>
         </GlassCard>
       )}
       <QrModal open={qrOpen} onClose={()=>setQrOpen(false)} link={qrLink} title={qrTitle} />
@@ -237,26 +252,41 @@ export default function GameLinks() {
       />
       {!anyRevealed && (
         <GlassCard>
-          <h2 className="text-xl font-semibold mb-3">{t('sections.addParticipants')}</h2>
-          <div className="grid gap-3">
-            <div>
-              <label className="block text-sm mb-1">{t('labels.fromDirectory')}</label>
-              <div className="max-h-40 overflow-auto rounded-2xl border border-white/20 p-2 bg-white/5">
-                {people.map(p => (
-                  <label key={p.id} className={`flex items-center gap-2 px-2 py-1 rounded-xl ${p.active ? '' : 'opacity-60'}`}>
-                    <input type="checkbox" disabled={!p.active} checked={!!selectedPeople[p.id]} onChange={e=> setSelectedPeople(prev=> ({...prev, [p.id]: e.target.checked}))} />
-                    <span>{p.name}</span>
-                  </label>
-                ))}
-                {people.length === 0 && <div className="text-sm text-slate-300">{t('helper.noPeopleAdmin')}</div>}
+          <FormSection
+            title={t('sections.addParticipants')}
+            description={t('labels.fromDirectory')}
+            action={(
+              <div className="flex items-center gap-2">
+                <Button type="button" variant="ghost" onClick={loadPeople} disabled={loading}>{t('buttons.refresh')}</Button>
+                <Button onClick={addPeople} disabled={!adminPassword || loading || (!Object.values(selectedPeople).some(Boolean))}>{t('buttons.addSelected')}</Button>
               </div>
-            </div>
-            <div>
-              <Button onClick={addPeople} disabled={!adminPassword || loading || (!Object.values(selectedPeople).some(Boolean))}>{t('buttons.addSelected')}</Button>
-            </div>
-          </div>
+            )}
+          >
+            <CardSurface className="max-h-40 overflow-auto p-2">
+              {people.map(p => (
+                <ParticipantSelectRow
+                  key={p.id}
+                  name={p.name}
+                  active={p.active}
+                  checked={!!selectedPeople[p.id]}
+                  onToggle={checked => setSelectedPeople(prev => ({ ...prev, [p.id]: checked }))}
+                />
+              ))}
+              {people.length === 0 && <div className="text-sm text-slate-300">{t('helper.noPeopleAdmin')}</div>}
+            </CardSurface>
+          </FormSection>
         </GlassCard>
       )}
+      <ConfirmDialog
+        open={confirmForce}
+        title={t('confirm.forceRedraw.title')}
+        message={t('confirm.forceRedraw.message')}
+        confirmText={t('confirm.forceRedraw.cta')}
+        variant="danger"
+        confirmVariant="danger"
+        onConfirm={() => doDraw(true)}
+        onClose={() => setConfirmForce(false)}
+      />
       
     </Layout>
   )

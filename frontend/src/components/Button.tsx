@@ -1,8 +1,9 @@
-import { ButtonHTMLAttributes } from 'react'
+import { ButtonHTMLAttributes, ReactNode } from 'react'
+import AnimatedText from './AnimatedText'
 
 type Props = ButtonHTMLAttributes<HTMLButtonElement> & { variant?: 'primary' | 'ghost' | 'accent' }
 
-export default function Button({ variant = 'primary', className = '', ...props }: Props) {
+export default function Button({ variant = 'primary', className = '', children, ...props }: Props) {
   const base =
     'inline-flex items-center justify-center rounded-full px-5 py-2.5 text-sm font-semibold transition-all focus:outline-none disabled:opacity-60 disabled:cursor-not-allowed'
   let styles = ''
@@ -16,5 +17,11 @@ export default function Button({ variant = 'primary', className = '', ...props }
     styles =
       'text-slate-100 border border-white/15 bg-gradient-to-br from-white/12 to-white/4 shadow-[inset_0_1px_0_rgba(255,255,255,0.45),0_14px_28px_rgba(2,6,23,0.6)] hover:bg-white/20 hover:-translate-y-0.5'
   }
-  return <button className={`${base} ${styles} ${className}`} {...props} />
+  const shouldAnimate = typeof children === 'string' || typeof children === 'number'
+  const content: ReactNode = shouldAnimate ? (
+    <AnimatedText watch={String(children)}>{children}</AnimatedText>
+  ) : (
+    children
+  )
+  return <button className={`${base} ${styles} ${className}`} {...props}>{content}</button>
 }

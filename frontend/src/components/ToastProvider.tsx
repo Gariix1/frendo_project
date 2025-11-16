@@ -1,4 +1,4 @@
-import React, { createContext, PropsWithChildren, useCallback, useContext, useMemo, useState } from 'react'
+import React, { createContext, PropsWithChildren, useCallback, useContext, useMemo, useRef, useState } from 'react'
 
 type Toast = { id: number; message: string; type?: 'success' | 'error' | 'info' }
 type ToastContextType = {
@@ -18,23 +18,28 @@ export function useToast() {
 
 export default function ToastProvider({ children }: PropsWithChildren) {
   const [toasts, setToasts] = useState<Toast[]>([])
-  const [seq, setSeq] = useState(1)
+  const nextId = useRef(1)
 
   const remove = useCallback((id: number) => {
     setToasts(prev => prev.filter(t => t.id !== id))
   }, [])
 
+  const toast = useCallback((message: string, type?: Toast['type']) => {
+    const id = nextId.current++
+    setToasts(prev => [...prev, { id, message, type }])
+    setTimeout(() => remove(id), 3000)
+  }, [remove])
+
+  const success = useCallback((message: string) => toast(message, 'success'), [toast])
+  const error = useCallback((message: string) => toast(message, 'error'), [toast])
+  const info = useCallback((message: string) => toast(message, 'info'), [toast])
+
   const api = useMemo<ToastContextType>(() => ({
-    toast: (message, type) => {
-      const id = seq
-      setSeq(id + 1)
-      setToasts(prev => [...prev, { id, message, type }])
-      setTimeout(() => remove(id), 3000)
-    },
-    success: (m) => api.toast(m, 'success'),
-    error: (m) => api.toast(m, 'error'),
-    info: (m) => api.toast(m, 'info'),
-  }), [seq, remove])
+    toast,
+    success,
+    error,
+    info,
+  }), [toast, success, error, info])
 
   return (
     <ToastContext.Provider value={api}>

@@ -1,8 +1,10 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import Modal from './Modal'
 import Button from './Button'
 import { api } from '../lib/api'
 import { useI18n } from '../i18n/I18nProvider'
+import { validationRules } from '../lib/validation'
+import AnimatedText from './AnimatedText'
 
 type Person = { id: string; name: string; active: boolean }
 
@@ -24,9 +26,18 @@ export default function PeoplePicker({ open, onClose, onConfirm, initialSelected
   const [query, setQuery] = useState('')
   const [selected, setSelected] = useState<Record<string, boolean>>({})
 
-  useEffect(() => {
-    (async () => { try { setPeople(await api.listPeople()) } catch {} })()
+  const loadPeople = useCallback(async () => {
+    try {
+      setPeople(await api.listPeople())
+    } catch {
+      /* ignore */
+    }
   }, [])
+
+  useEffect(() => {
+    if (!open) return
+    loadPeople()
+  }, [open, loadPeople])
 
   useEffect(() => {
     if (!open) return
@@ -42,6 +53,7 @@ export default function PeoplePicker({ open, onClose, onConfirm, initialSelected
   }, [people, query])
 
   const count = useMemo(() => Object.values(selected).filter(Boolean).length, [selected])
+  const minParticipants = validationRules.game.minParticipants
 
   return (
     <Modal open={open} onClose={onClose} title={t('peoplePicker.title')}>
@@ -56,13 +68,15 @@ export default function PeoplePicker({ open, onClose, onConfirm, initialSelected
               checked={!!selected[p.id]}
               onChange={e=> setSelected(prev => ({ ...prev, [p.id]: e.target.checked }))}
             />
-            <span>{p.name}</span>
+            <span><AnimatedText watch={`picker-${p.id}-${p.name}`}>{p.name}</AnimatedText></span>
           </label>
         ))}
-        {filtered.length === 0 && <div className="text-sm text-slate-300">{t('peoplePicker.noResults')}</div>}
+        {filtered.length === 0 && <div className="text-sm text-slate-300"><AnimatedText>{t('peoplePicker.noResults')}</AnimatedText></div>}
       </div>
       <div className="flex items-center justify-between">
-        <span className="text-sm text-slate-300">{t('common.selectedCount', { count })}</span>
+        <span className="text-sm text-slate-300">
+          <AnimatedText watch={`selected-${count}`}>{t('common.selectedCount', { count })}</AnimatedText>
+        </span>
         <div className="flex items-center gap-2">
           <Button variant="ghost" onClick={onClose}>{t('buttons.cancel')}</Button>
           <Button
@@ -73,7 +87,7 @@ export default function PeoplePicker({ open, onClose, onConfirm, initialSelected
                 people: selectedPeople.map(p => ({ id: p.id, name: p.name })),
               })
             }}
-            disabled={count < 3}
+            disabled={count < minParticipants}
           >
             {t('buttons.confirm')}
           </Button>

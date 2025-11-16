@@ -1,0 +1,21 @@
+{
+  "title": {
+    "minLength": 1,
+    "maxLength": 100
+  },
+  "adminPassword": {
+    "minLength": 3,
+    "maxLength": 128
+  },
+  "personName": {
+    "minLength": 1,
+    "maxLength": 100
+  },
+  "participantName": {
+    "minLength": 1,
+    "maxLength": 100
+  },
+  "game": {
+    "minParticipants": 3
+  }
+}

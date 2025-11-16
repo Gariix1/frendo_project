@@ -40,7 +40,8 @@ Global directory endpoints (optional) use `X-Master-Password: <password>` if `MA
 
 - Create game
   - POST `/api/games`
-  - Body: `{ "title": "Holiday 2025", "admin_password": "secret123", "participants": ["Ana","Luis","Carla"] }`
+  - Body: `{ "title": "Holiday 2025", "admin_password": "secret123", "participants": ["Ana","Luis"], "person_ids": ["u10","u11"] }`
+    - You may mix directory ids (`person_ids`) with ad-hoc names (`participants`). The combined list must respect the minimum participant rule.
   - Responses:
     - 201 `{ "game_id": "ABC123", "share_base_url": "https://app.example.com" }`
     - 400 on invalid input (duplicates, < 3 participants)

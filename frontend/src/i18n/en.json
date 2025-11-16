@@ -3,6 +3,16 @@
   "nav.create": "Create",
   "nav.admin": "Admin",
 
+  "fields.title": "the title",
+  "fields.adminPassword": "the admin password",
+  "fields.personName": "the name",
+  "fields.participantName": "the participant name",
+
+  "validation.required": "Please fill in {field}.",
+  "validation.minLength": "{field} must have at least {min} characters.",
+  "validation.maxLength": "{field} must have at most {max} characters.",
+  "validation.minParticipants": "Select at least {min} participants.",
+
   "buttons.create": "Create game",
   "buttons.creating": "Creating…",
   "buttons.cancel": "Cancel",
@@ -86,6 +96,8 @@
   "admin.enterPasswordPrompt": "Enter the admin password for this game.",
   "admin.promptNewTitle": "New title",
   "admin.promptRenamePerson": "New name",
+  "admin.dashboardHeroTitle": "Admin Dashboard",
+  "admin.dashboardHeroDescription": "You have {games} games running with {people} active people ready to play.",
   "admin.createSectionTitle": "Create Game",
   "admin.createSectionHelper": "Use the Create page to start a new game as the organizer.",
   "admin.gamesSectionTitle": "Games",
@@ -94,8 +106,13 @@
   "admin.peopleSectionTitle": "People Directory",
   "admin.peopleHelper": "Only admins can manage this list. If MASTER_ADMIN_PASSWORD is set, enter it here.",
   "admin.addPersonLabel": "Add person",
-  "admin.personPlaceholder": "Name"
-  ,
+  "admin.personPlaceholder": "Name",
+  "admin.goToDirectory": "Manage directory",
+  "admin.stats.totalGames": "Total games",
+  "admin.stats.activeGames": "Active games",
+  "admin.stats.activePeople": "Active people",
+  "admin.stats.totalParticipants": "{count} participants across games",
+  
   "sections.shareLinks": "Share Links",
   "labels.adminPassword": "Admin Password",
   "labels.masterPassword": "Master password",

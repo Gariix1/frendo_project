@@ -1,4 +1,4 @@
-import { useId } from 'react'
+import { useId, useState } from 'react'
 import GlassCard from '../components/GlassCard'
 import Button from '../components/Button'
 import Layout from '../components/Layout'
@@ -8,11 +8,17 @@ import { useI18n } from '../i18n/I18nProvider'
 import { useCreateGameForm } from '../hooks/useCreateGameForm'
 import FormField from '../components/FormField'
 import Chip from '../components/Chip'
+import HeroCard from '../components/HeroCard'
+import AnimatedText from '../components/AnimatedText'
+import { validationRules } from '../lib/validation'
 
 export default function CreateGame() {
   const { t } = useI18n()
   const titleId = useId()
   const passwordId = useId()
+  const [manualName, setManualName] = useState('')
+  const [manualError, setManualError] = useState<string | null>(null)
+  const minParticipants = validationRules.game.minParticipants
   const {
     title,
     setTitle,
@@ -23,32 +29,24 @@ export default function CreateGame() {
     closePicker,
     handlePickerConfirm,
     selectedPeople,
-    selectedIds,
+    selectedDirectoryIds,
     participantCount,
     handleSubmit,
     loading,
     error,
     removeSelectedPerson,
+    addManualParticipant,
   } = useCreateGameForm(t('brand.title'))
   const hasSelection = participantCount > 0
 
   return (
     <Layout>
-      <section className="hero-card p-8">
-        <div className="hero-card__content space-y-4 max-w-2xl">
-          <p className="text-sm uppercase tracking-[0.4em] text-white/70">{t('brand.title')}</p>
-          <h1 className="text-4xl md:text-5xl font-semibold text-white drop-shadow-lg">{t('create.title')}</h1>
-          <p className="text-base md:text-lg text-white/80">
-            {t('create.heroCopy', { defaultValue: 'Organiza el intercambio perfecto con un tablero moderno, enlaces mágicos y una presentación digna de clay art.' })}
-          </p>
-          <div className="flex flex-wrap gap-3">
-            <Button onClick={openPicker} type="button">
-              {t('create.pickFromDirectory')}
-            </Button>
-          </div>
-        </div>
-        <div className="hero-card__visual" aria-hidden />
-      </section>
+      <HeroCard
+        eyebrow={<AnimatedText>{t('brand.title')}</AnimatedText>}
+        title={<AnimatedText>{t('create.title')}</AnimatedText>}
+        description={<AnimatedText watch="create-heroCopy">{t('create.heroCopy', { defaultValue: 'Organiza el intercambio perfecto con un tablero moderno, enlaces mágicos y una presentación digna de clay art.' })}</AnimatedText>}
+        actions={<Button onClick={openPicker} type="button"><AnimatedText>{t('create.pickFromDirectory')}</AnimatedText></Button>}
+      />
 
       <GlassCard>
         <form onSubmit={handleSubmit} className="space-y-6">
@@ -84,16 +82,45 @@ export default function CreateGame() {
                 <p className="text-sm text-white/70">{t('create.noParticipantsSelected')}</p>
               )}
             </div>
+            <div className="space-y-3">
+              <div className="flex flex-wrap gap-2">
+                <Input
+                  value={manualName}
+                  onChange={e => {
+                    setManualName(e.target.value)
+                    setManualError(null)
+                  }}
+                  placeholder={t('admin.personPlaceholder')}
+                />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={() => {
+                    const err = addManualParticipant(manualName)
+                    if (err) {
+                      setManualError(err)
+                      return
+                    }
+                    setManualName('')
+                    setManualError(null)
+                  }}
+                  disabled={!manualName.trim()}
+                >
+                  {t('buttons.add')}
+                </Button>
+              </div>
+              {manualError && <p className="text-red-300 text-sm">{manualError}</p>}
+            </div>
           </FormField>
           {error && <p className="text-red-300 text-sm">{error}</p>}
-          <Button type="submit" disabled={loading || participantCount < 3}>{loading ? t('buttons.creating') : t('buttons.create')}</Button>
+          <Button type="submit" disabled={loading || participantCount < minParticipants}>{loading ? t('buttons.creating') : t('buttons.create')}</Button>
         </form>
       </GlassCard>
       <PeoplePicker
         open={pickerOpen}
         onClose={closePicker}
         onConfirm={handlePickerConfirm}
-        initialSelected={selectedIds}
+        initialSelected={selectedDirectoryIds}
       />
     </Layout>
   )
