@@ -7,14 +7,29 @@ async function request(path: string, init?: RequestInit) {
   })
   if (!res.ok) {
     let message = res.statusText
+    let code: string | undefined
     try {
       const data = await res.json()
-      message = (data && (data.detail || data.message)) || JSON.stringify(data)
+      if (data) {
+        if (typeof data.detail === 'string') {
+          message = data.detail
+        } else if (data.detail && typeof data.detail === 'object') {
+          message = data.detail.message || message
+          code = data.detail.code || code
+        }
+        if (!code && typeof data.code === 'string') {
+          code = data.code
+        }
+        if ((!message || message === res.statusText) && typeof data.message === 'string') {
+          message = data.message
+        }
+      }
     } catch {
       try { message = await res.text() } catch {}
     }
-    const err = new Error(message || res.statusText) as Error & { status?: number }
+    const err = new Error(message || res.statusText) as Error & { status?: number; code?: string }
     err.status = res.status
+    if (code) err.code = code
     throw err
   }
   const ct = res.headers.get('content-type') || ''

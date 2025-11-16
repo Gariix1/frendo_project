@@ -8,11 +8,14 @@ import { useI18n } from '../i18n/I18nProvider'
 import { useCreateGameForm } from '../hooks/useCreateGameForm'
 import FormField from '../components/FormField'
 import Chip from '../components/Chip'
+import HeroCard from '../components/HeroCard'
+import { validationRules } from '../lib/validation'
 
 export default function CreateGame() {
   const { t } = useI18n()
   const titleId = useId()
   const passwordId = useId()
+  const minParticipants = validationRules.game.minParticipants
   const {
     title,
     setTitle,
@@ -34,21 +37,12 @@ export default function CreateGame() {
 
   return (
     <Layout>
-      <section className="hero-card p-8">
-        <div className="hero-card__content space-y-4 max-w-2xl">
-          <p className="text-sm uppercase tracking-[0.4em] text-white/70">{t('brand.title')}</p>
-          <h1 className="text-4xl md:text-5xl font-semibold text-white drop-shadow-lg">{t('create.title')}</h1>
-          <p className="text-base md:text-lg text-white/80">
-            {t('create.heroCopy', { defaultValue: 'Organiza el intercambio perfecto con un tablero moderno, enlaces mágicos y una presentación digna de clay art.' })}
-          </p>
-          <div className="flex flex-wrap gap-3">
-            <Button onClick={openPicker} type="button">
-              {t('create.pickFromDirectory')}
-            </Button>
-          </div>
-        </div>
-        <div className="hero-card__visual" aria-hidden />
-      </section>
+      <HeroCard
+        eyebrow={t('brand.title')}
+        title={t('create.title')}
+        description={t('create.heroCopy', { defaultValue: 'Organiza el intercambio perfecto con un tablero moderno, enlaces mágicos y una presentación digna de clay art.' })}
+        actions={<Button onClick={openPicker} type="button">{t('create.pickFromDirectory')}</Button>}
+      />
 
       <GlassCard>
         <form onSubmit={handleSubmit} className="space-y-6">
@@ -86,7 +80,7 @@ export default function CreateGame() {
             </div>
           </FormField>
           {error && <p className="text-red-300 text-sm">{error}</p>}
-          <Button type="submit" disabled={loading || participantCount < 3}>{loading ? t('buttons.creating') : t('buttons.create')}</Button>
+          <Button type="submit" disabled={loading || participantCount < minParticipants}>{loading ? t('buttons.creating') : t('buttons.create')}</Button>
         </form>
       </GlassCard>
       <PeoplePicker

@@ -4,9 +4,8 @@ import GlassCard from '../components/GlassCard'
 import Button from '../components/Button'
 import Layout from '../components/Layout'
 import { api } from '../lib/api'
-import { useModal } from '../components/ModalProvider'
+import ConfirmDialog from '../components/ConfirmDialog'
 import { useI18n } from '../i18n/I18nProvider'
-
 export default function ViewResult() {
   const { gameId, token } = useParams()
   const [name, setName] = useState('')
@@ -14,7 +13,7 @@ export default function ViewResult() {
   const [canReveal, setCanReveal] = useState(false)
   const [assignedTo, setAssignedTo] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
-  const { confirm } = useModal()
+  const [confirmReveal, setConfirmReveal] = useState(false)
   const { t } = useI18n()
 
   useEffect(() => {
@@ -57,14 +56,7 @@ export default function ViewResult() {
               <div className="space-y-3">
                 <p className="text-slate-300">{t('view.ready')}</p>
                 {!canReveal && <p className="text-amber-300 text-sm">{t('view.notReady')}</p>}
-                <Button onClick={async () => {
-                  const ok = await confirm({
-                    title: t('view.confirmTitle'),
-                    message: t('view.confirmMessage'),
-                    confirmText: t('view.confirmCta')
-                  })
-                  if (ok) doReveal()
-                }} disabled={!canReveal}>{t('view.cta')}</Button>
+                <Button onClick={() => setConfirmReveal(true)} disabled={!canReveal}>{t('view.cta')}</Button>
               </div>
             )}
             {assignedTo && (
@@ -78,8 +70,15 @@ export default function ViewResult() {
           </div>
         )}
       </GlassCard>
-      
+      <ConfirmDialog
+        open={confirmReveal}
+        title={t('view.confirmTitle')}
+        message={t('view.confirmMessage')}
+        confirmText={t('view.confirmCta')}
+        variant="primary"
+        onConfirm={doReveal}
+        onClose={() => setConfirmReveal(false)}
+      />
     </Layout>
   )
 }
-

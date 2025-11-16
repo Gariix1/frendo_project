@@ -3,6 +3,7 @@ import Modal from './Modal'
 import Button from './Button'
 import { api } from '../lib/api'
 import { useI18n } from '../i18n/I18nProvider'
+import { validationRules } from '../lib/validation'
 
 type Person = { id: string; name: string; active: boolean }
 
@@ -42,6 +43,7 @@ export default function PeoplePicker({ open, onClose, onConfirm, initialSelected
   }, [people, query])
 
   const count = useMemo(() => Object.values(selected).filter(Boolean).length, [selected])
+  const minParticipants = validationRules.game.minParticipants
 
   return (
     <Modal open={open} onClose={onClose} title={t('peoplePicker.title')}>
@@ -73,7 +75,7 @@ export default function PeoplePicker({ open, onClose, onConfirm, initialSelected
                 people: selectedPeople.map(p => ({ id: p.id, name: p.name })),
               })
             }}
-            disabled={count < 3}
+            disabled={count < minParticipants}
           >
             {t('buttons.confirm')}
           </Button>

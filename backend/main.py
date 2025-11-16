@@ -33,6 +33,7 @@ from .utils import (
     verify_password,
     get_share_base_url,
 )
+from .validation import GAME_RULES
 
 
 load_dotenv()  # Load .env variables (e.g., MASTER_ADMIN_PASSWORD, SHARE_BASE_URL)
@@ -64,14 +65,18 @@ def now_iso() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
+def app_error(status: int, code: str, message: str) -> HTTPException:
+    return HTTPException(status_code=status, detail={"code": code, "message": message})
+
+
 def require_admin(state: Dict[str, Any], game_id: str, admin_password: Optional[str]) -> Dict[str, Any]:
     if not admin_password:
-        raise HTTPException(status_code=401, detail="missing admin password")
+        raise app_error(401, "missing_admin_password", "Missing admin password")
     game = state["games"].get(game_id)
     if not game:
-        raise HTTPException(status_code=404, detail="game not found")
+        raise app_error(404, "game_not_found", "Game not found")
     if not verify_password(admin_password, game["admin_password_hash"]):
-        raise HTTPException(status_code=401, detail="invalid admin password")
+        raise app_error(401, "invalid_admin_password", "Invalid admin password")
     return game
 
 
@@ -81,9 +86,9 @@ def require_master(master_password: Optional[str]) -> None:
         # No master password configured; allow without header
         return
     if not master_password:
-        raise HTTPException(status_code=401, detail="missing master password")
+        raise app_error(401, "missing_master_password", "Missing master password")
     if master_password != expected:
-        raise HTTPException(status_code=401, detail="invalid master password")
+        raise app_error(401, "invalid_master_password", "Invalid master password")
 
 
 @app.exception_handler(RequestValidationError)
@@ -107,7 +112,8 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
     return JSONResponse(
         status_code=400,
         content={
-            "detail": "Invalid JSON body. Send a JSON object (application/json) — e.g.: { \"names\": [\"mateo\"] }",
+            "code": "invalid_request_body",
+            "message": "Invalid JSON body. Send a JSON object (application/json) - e.g.: { \"names\": [\"mateo\"] }",
             "errors": safe_errors,
         },
     )
@@ -143,16 +149,17 @@ def create_game(payload: CreateGameRequest) -> Dict[str, Any]:
         if pid in people:
             selected.append(people[pid])
         else:
-            raise HTTPException(status_code=400, detail=f"person id not found or inactive: {pid}")
-    if len(selected) < 3:
-        raise HTTPException(status_code=400, detail="at least 3 active people required")
+            raise app_error(400, "person_not_found", f"Person id not found or inactive: {pid}")
+    min_required = GAME_RULES["minParticipants"]
+    if len(selected) < min_required:
+        raise app_error(400, "game_min_participants", f"At least {min_required} active people required")
     # ensure unique names within the game
     names_seen = set()
     idx = 1
     for person in selected:
         name = person.get("name", "").strip()
         if not name or name.lower() in names_seen:
-            raise HTTPException(status_code=400, detail="duplicate or empty names among selected people")
+            raise app_error(400, "duplicate_participant_names", "Duplicate or empty names among selected people")
         names_seen.add(name.lower())
         participants.append(
             {
@@ -243,7 +250,7 @@ def delete_game(game_id: str, x_admin_password: Optional[str] = Header(None)) ->
         del state["games"][game_id]
         save_state(state)
         return Response(status_code=204)
-    raise HTTPException(status_code=404, detail="game not found")
+    raise app_error(404, "game_not_found", "Game not found")
 
 
 @app.post("/api/games/{game_id}/deactivate_game")
@@ -274,14 +281,21 @@ def get_links(game_id: str, x_admin_password: Optional[str] = Header(None)) -> L
     links = []
     for p in game["participants"]:
         url = f"{base}/game/{game_id}/token/{p['token']}"
-        links.append({"name": p["name"], "link": url})
+        links.append(
+            {
+                "participant_id": p["id"],
+                "token": p["token"],
+                "name": p["name"],
+                "link": url,
+            }
+        )
     return links
 
 
 @app.post("/api/games/{game_id}/participants")
 def add_participants(game_id: str, payload: AddParticipantsRequest, x_admin_password: Optional[str] = Header(None)) -> Dict[str, Any]:
     # Names-based addition disabled by design
-    raise HTTPException(status_code=400, detail="adding by names is disabled; use /participants/by_ids")
+    raise app_error(400, "feature_disabled", "Adding by names is disabled; use /participants/by_ids")
 
 
 @app.post("/api/games/{game_id}/participants/by_ids")
@@ -289,7 +303,7 @@ def add_participants_by_ids(game_id: str, payload: AddParticipantsByIdsRequest, 
     state = load_state()
     game = require_admin(state, game_id, x_admin_password)
     if game["any_revealed"]:
-        raise HTTPException(status_code=409, detail="cannot add participants after reveal started")
+        raise app_error(409, "game_reveal_conflict", "Cannot add participants after reveal started")
     people = {p["id"]: p for p in state.get("people", []) if p.get("active", True)}
     existing_names = {p["name"].strip().lower() for p in game["participants"]}
     existing_person_ids = {p.get("person_id") for p in game["participants"] if p.get("person_id")}
@@ -297,16 +311,16 @@ def add_participants_by_ids(game_id: str, payload: AddParticipantsByIdsRequest, 
     for pid in payload.person_ids:
         person = people.get(pid)
         if not person:
-            raise HTTPException(status_code=400, detail=f"person id not found or inactive: {pid}")
+            raise app_error(400, "person_not_found", f"Person id not found or inactive: {pid}")
         if pid in existing_person_ids:
-            raise HTTPException(status_code=400, detail=f"person already in game: {pid}")
+            raise app_error(400, "person_already_in_game", f"Person already in game: {pid}")
         name = person.get("name", "").strip()
         if not name or name.lower() in existing_names:
-            raise HTTPException(status_code=400, detail=f"duplicate name: {name}")
+            raise app_error(400, "duplicate_participant_names", f"Duplicate name: {name}")
         to_add_records.append(person)
         existing_names.add(name.lower())
     if not to_add_records:
-        raise HTTPException(status_code=400, detail="no valid participants to add")
+        raise app_error(400, "no_participants_to_add", "No valid participants to add")
     next_idx = len(game["participants"]) + 1
     added = []
     for person in to_add_records:
@@ -334,11 +348,11 @@ def remove_participant(game_id: str, participant_id: str, x_admin_password: Opti
     state = load_state()
     game = require_admin(state, game_id, x_admin_password)
     if game["any_revealed"]:
-        raise HTTPException(status_code=409, detail="cannot remove participants after reveal started")
+        raise app_error(409, "game_reveal_conflict", "Cannot remove participants after reveal started")
     before = len(game["participants"])
     game["participants"] = [p for p in game["participants"] if p["id"] != participant_id]
     if len(game["participants"]) == before:
-        raise HTTPException(status_code=404, detail="participant not found")
+        raise app_error(404, "participant_not_found", "Participant not found")
     game["updated_at"] = now_iso()
     save_state(state)
     return Response(status_code=204)
@@ -349,7 +363,7 @@ def draw_assignments(game_id: str, payload: Any = Body(None), x_admin_password: 
     state = load_state()
     game = require_admin(state, game_id, x_admin_password)
     if not bool(game.get("active", True)):
-        raise HTTPException(status_code=409, detail="game is inactive")
+        raise app_error(409, "game_inactive", "Game is inactive")
     force_flag = False
     try:
         if isinstance(payload, (bytes, bytearray)):
@@ -365,10 +379,10 @@ def draw_assignments(game_id: str, payload: Any = Body(None), x_admin_password: 
     except Exception:
         force_flag = False
     if game["any_revealed"] and not force_flag:
-        raise HTTPException(status_code=409, detail="cannot redraw after reveal started (use force=true)")
+        raise app_error(409, "game_reveal_conflict", "Cannot redraw after reveal started (use force=true)")
     participants = [p for p in game["participants"] if p["active"]]
-    if len(participants) < 3:
-        raise HTTPException(status_code=400, detail="at least 3 active participants required")
+    if len(participants) < GAME_RULES["minParticipants"]:
+        raise app_error(400, "game_min_participants", f"At least {GAME_RULES['minParticipants']} active participants required")
     ids = [p["id"] for p in participants]
     mapping = derangement_assignment(ids)
     # apply mapping
@@ -388,14 +402,14 @@ def deactivate_token(game_id: str, token: str, x_admin_password: Optional[str] =
     state = load_state()
     game = require_admin(state, game_id, x_admin_password)
     if not bool(game.get("active", True)):
-        raise HTTPException(status_code=409, detail="game is inactive")
+        raise app_error(409, "game_inactive", "Game is inactive")
     for p in game["participants"]:
         if p["token"] == token:
             p["active"] = False
             game["updated_at"] = now_iso()
             save_state(state)
             return {"ok": True}
-    raise HTTPException(status_code=404, detail="token not found")
+    raise app_error(404, "token_not_found", "Token not found")
 
 
 @app.post("/api/games/{game_id}/{token}/reactivate")
@@ -403,14 +417,14 @@ def reactivate_token(game_id: str, token: str, x_admin_password: Optional[str] =
     state = load_state()
     game = require_admin(state, game_id, x_admin_password)
     if not bool(game.get("active", True)):
-        raise HTTPException(status_code=409, detail="game is inactive")
+        raise app_error(409, "game_inactive", "Game is inactive")
     for p in game["participants"]:
         if p["token"] == token:
             p["active"] = True
             game["updated_at"] = now_iso()
             save_state(state)
             return {"ok": True}
-    raise HTTPException(status_code=404, detail="token not found")
+    raise app_error(404, "token_not_found", "Token not found")
 
 
 def _find_game_and_participant(state: Dict[str, Any], game_id: str, token: str) -> Optional[Dict[str, Any]]:
@@ -428,13 +442,13 @@ def participant_preview(game_id: str, token: str) -> ParticipantPreviewResponse:
     state = load_state()
     pair = _find_game_and_participant(state, game_id, token)
     if not pair:
-        raise HTTPException(status_code=404, detail="not found")
+        raise app_error(404, "link_not_found", "Link not found")
     game = pair["game"]
     p = pair["participant"]
     if not bool(game.get("active", True)):
-        raise HTTPException(status_code=404, detail="not found")
+        raise app_error(404, "link_not_found", "Link not found")
     if not p["active"]:
-        raise HTTPException(status_code=404, detail="not found")
+        raise app_error(404, "link_not_found", "Link not found")
     can_reveal = (p["assigned_to_participant_id"] is not None) and (not p["viewed"])
     return ParticipantPreviewResponse(name=p["name"], viewed=p["viewed"], can_reveal=can_reveal)
 
@@ -444,18 +458,18 @@ def reveal_assignment(game_id: str, token: str) -> RevealResponse:
     state = load_state()
     pair = _find_game_and_participant(state, game_id, token)
     if not pair:
-        raise HTTPException(status_code=404, detail="not found")
+        raise app_error(404, "link_not_found", "Link not found")
     game = pair["game"]
     p = pair["participant"]
     if not bool(game.get("active", True)):
-        raise HTTPException(status_code=404, detail="not found")
+        raise app_error(404, "link_not_found", "Link not found")
     if not p["active"]:
-        raise HTTPException(status_code=404, detail="not found")
+        raise app_error(404, "link_not_found", "Link not found")
     assigned_id = p.get("assigned_to_participant_id")
     if not assigned_id:
-        raise HTTPException(status_code=409, detail="draw not performed yet")
+        raise app_error(409, "assignment_not_ready", "Draw not performed yet")
     if p["viewed"]:
-        raise HTTPException(status_code=409, detail="already revealed")
+        raise app_error(409, "assignment_already_viewed", "Already revealed")
     # find assigned participant name
     assigned_name: Optional[str] = None
     for q in game["participants"]:
@@ -463,7 +477,7 @@ def reveal_assignment(game_id: str, token: str) -> RevealResponse:
             assigned_name = q["name"]
             break
     if not assigned_name:
-        raise HTTPException(status_code=500, detail="invalid assignment state")
+        raise app_error(500, "invalid_assignment_state", "Invalid assignment state")
     p["viewed"] = True
     p["viewed_at"] = now_iso()
     game["any_revealed"] = True
@@ -492,19 +506,19 @@ def add_people(payload: Any = Body(...), x_master_password: Optional[str] = Head
         try:
             payload = payload.decode("utf-8", errors="replace")
         except Exception:
-            raise HTTPException(status_code=400, detail="invalid payload bytes")
+            raise app_error(400, "invalid_payload_bytes", "Invalid payload bytes")
     if isinstance(payload, str):
         import json as _json
         try:
             payload = _json.loads(payload)
         except Exception:
-            raise HTTPException(status_code=400, detail="Invalid JSON body. Expected { \"names\": [\"Ana\"] }")
+            raise app_error(400, "invalid_request_body", 'Invalid JSON body. Expected { "names": ["Ana"] }')
     if not isinstance(payload, dict):
-        raise HTTPException(status_code=400, detail="Invalid JSON body. Expected an object with a 'names' array")
+        raise app_error(400, "invalid_request_body", "Invalid JSON body. Expected an object with a 'names' array")
     try:
         model = CreatePeopleRequest(**payload)
     except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise app_error(400, "invalid_people_request", str(e))
     existing = {p["name"].strip().lower(): p for p in state.get("people", [])}
     added = []
     next_idx = len(state.get("people", [])) + 1
@@ -531,18 +545,18 @@ def rename_person(person_id: str, payload: UpdateParticipantRequest, x_master_pa
     people = state.get("people", [])
     new_name = payload.name.strip()
     if not new_name:
-        raise HTTPException(status_code=400, detail="name cannot be empty")
+        raise app_error(400, "name_required", "Name cannot be empty")
     # unique name
     for p in people:
         if p["id"] != person_id and p["name"].strip().lower() == new_name.lower():
-            raise HTTPException(status_code=400, detail="duplicate name")
+            raise app_error(400, "name_duplicate", "Duplicate name")
     target = None
     for p in people:
         if p["id"] == person_id:
             target = p
             break
     if not target:
-        raise HTTPException(status_code=404, detail="person not found")
+        raise app_error(404, "person_not_found", "Person not found")
     target["name"] = new_name
     save_state(state)
     return {"ok": True}
@@ -557,7 +571,7 @@ def deactivate_person(person_id: str, x_master_password: Optional[str] = Header(
             p["active"] = False
             save_state(state)
             return {"ok": True}
-    raise HTTPException(status_code=404, detail="person not found")
+    raise app_error(404, "person_not_found", "Person not found")
 
 
 @app.post("/api/people/{person_id}/reactivate")
@@ -569,7 +583,7 @@ def reactivate_person(person_id: str, x_master_password: Optional[str] = Header(
             p["active"] = True
             save_state(state)
             return {"ok": True}
-    raise HTTPException(status_code=404, detail="person not found")
+    raise app_error(404, "person_not_found", "Person not found")
 
 
 @app.patch("/api/games/{game_id}/participants/{participant_id}")
@@ -578,18 +592,18 @@ def rename_participant(game_id: str, participant_id: str, payload: UpdatePartici
     game = require_admin(state, game_id, x_admin_password)
     new_name = payload.name.strip()
     if not new_name:
-        raise HTTPException(status_code=400, detail="name cannot be empty")
+        raise app_error(400, "name_required", "Name cannot be empty")
     # unique across game (case-insensitive)
     for p in game["participants"]:
         if p["id"] != participant_id and p["name"].strip().lower() == new_name.lower():
-            raise HTTPException(status_code=400, detail="duplicate name")
+            raise app_error(400, "duplicate_participant_names", "Duplicate name")
     target = None
     for p in game["participants"]:
         if p["id"] == participant_id:
             target = p
             break
     if not target:
-        raise HTTPException(status_code=404, detail="participant not found")
+        raise app_error(404, "participant_not_found", "Participant not found")
     target["name"] = new_name
     game["updated_at"] = now_iso()
     save_state(state)
