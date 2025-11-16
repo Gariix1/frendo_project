@@ -1,8 +1,10 @@
 import { Link, useLocation } from 'react-router-dom'
 import { useEffect, useRef, useState } from 'react'
+import { useI18n } from '../i18n/I18nProvider'
 
 export default function NavBar() {
   const { pathname } = useLocation()
+  const { t, locale, setLocale } = useI18n()
   const [hidden, setHidden] = useState(false)
   const lastY = useRef<number>(0)
   const raf = useRef<number | null>(null)
@@ -49,10 +51,19 @@ export default function NavBar() {
     <div className={`fixed top-0 inset-x-0 z-40 transition-transform duration-300 ${hidden ? '-translate-y-full' : 'translate-y-0'}`}>
       <div className="max-w-3xl mx-auto px-4" style={{ paddingTop: 'calc(env(safe-area-inset-top) + 0.5rem)' }}>
         <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl shadow-xl px-3 sm:px-4 py-2 flex items-center justify-between">
-          <Link to="/" className="font-semibold tracking-wide">Secret Friend</Link>
+          <Link to="/" className="font-semibold tracking-wide">{t('brand.title')}</Link>
           <nav className="flex items-center gap-1 sm:gap-2 text-sm overflow-x-auto whitespace-nowrap">
-            {link('/', 'Create')}
-            {link('/admin', 'Admin')}
+            {link('/', t('nav.create'))}
+            {link('/admin', t('nav.admin'))}
+            <select
+              aria-label="Language"
+              className="ml-2 px-2 py-1 bg-white/10 text-slate-100 border border-white/20 rounded-lg"
+              value={locale}
+              onChange={(e) => setLocale((e.target.value as 'es' | 'en') || 'es')}
+            >
+              <option value="es">ES</option>
+              <option value="en">EN</option>
+            </select>
           </nav>
         </div>
       </div>

@@ -5,6 +5,7 @@ import Button from '../components/Button'
 import Layout from '../components/Layout'
 import { api } from '../lib/api'
 import { useModal } from '../components/ModalProvider'
+import { useI18n } from '../i18n/I18nProvider'
 
 export default function ViewResult() {
   const { gameId, token } = useParams()
@@ -14,6 +15,7 @@ export default function ViewResult() {
   const [assignedTo, setAssignedTo] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const { confirm } = useModal()
+  const { t } = useI18n()
 
   useEffect(() => {
     const load = async () => {
@@ -25,11 +27,11 @@ export default function ViewResult() {
         setViewed(res.viewed)
         setCanReveal(res.can_reveal)
       } catch (err: any) {
-        setError('Link not found or inactive. Please contact your organizer.')
+        setError(t('errors.linkNotFound'))
       }
     }
     load()
-  }, [gameId, token])
+  }, [gameId, token, t])
 
   const doReveal = async () => {
     if (!gameId || !token) return
@@ -39,39 +41,39 @@ export default function ViewResult() {
       setAssignedTo(res.assigned_to)
       setViewed(true)
     } catch (err: any) {
-      setError('This link was already revealed. If needed, ask your organizer to reactivate your link.')
+      setError(t('view.alreadyUsed'))
     }
   }
 
   return (
     <Layout>
       <GlassCard>
-        <h1 className="text-2xl font-semibold mb-2">Secret Friend</h1>
+        <h1 className="text-2xl font-semibold mb-2">{t('brand.title')}</h1>
         {error && <p className="text-red-300 text-sm mb-2">{error}</p>}
         {!error && (
           <div className="space-y-3">
-            <p className="text-slate-200">Hi <span className="font-semibold">{name || 'friend'}</span>!</p>
+            <p className="text-slate-200">{name ? t('view.greeting', { name }) : t('view.greetingFallback')}</p>
             {!assignedTo && !viewed && (
               <div className="space-y-3">
-                <p className="text-slate-300">Ready to reveal? Make sure no one is looking behind you.</p>
-                {!canReveal && <p className="text-amber-300 text-sm">Your organizer might not have performed the draw yet. Please try again later.</p>}
+                <p className="text-slate-300">{t('view.ready')}</p>
+                {!canReveal && <p className="text-amber-300 text-sm">{t('view.notReady')}</p>}
                 <Button onClick={async () => {
                   const ok = await confirm({
-                    title: 'Confirm Reveal',
-                    message: 'This will reveal your secret friend and mark your link as viewed. Continue?',
-                    confirmText: 'Reveal now'
+                    title: t('view.confirmTitle'),
+                    message: t('view.confirmMessage'),
+                    confirmText: t('view.confirmCta')
                   })
                   if (ok) doReveal()
-                }} disabled={!canReveal}>I’m ready</Button>
+                }} disabled={!canReveal}>{t('view.cta')}</Button>
               </div>
             )}
             {assignedTo && (
               <div className="mt-2">
-                <p className="text-lg">Your secret friend is <span className="font-bold">{assignedTo}</span> 🎁</p>
+                <p className="text-lg">{t('view.result', { name: assignedTo })}</p>
               </div>
             )}
             {!assignedTo && viewed && (
-              <p className="text-slate-300">This link was already used. If needed, contact your organizer.</p>
+              <p className="text-slate-300">{t('view.alreadyUsed')}</p>
             )}
           </div>
         )}
@@ -80,3 +82,4 @@ export default function ViewResult() {
     </Layout>
   )
 }
+

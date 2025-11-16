@@ -1,65 +1,100 @@
-import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useId } from 'react'
 import GlassCard from '../components/GlassCard'
 import Button from '../components/Button'
 import Layout from '../components/Layout'
-import { api } from '../lib/api'
 import PeoplePicker from '../components/PeoplePicker'
+import Input from '../components/Input'
+import { useI18n } from '../i18n/I18nProvider'
+import { useCreateGameForm } from '../hooks/useCreateGameForm'
+import FormField from '../components/FormField'
+import Chip from '../components/Chip'
 
 export default function CreateGame() {
-  const [title, setTitle] = useState('Secret Friend')
-  const [password, setPassword] = useState('')
-  const [pickerOpen, setPickerOpen] = useState(false)
-  const [selectedIds, setSelectedIds] = useState<string[]>([])
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const navigate = useNavigate()
-
-  const onSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setError(null)
-    if (selectedIds.length < 3) {
-      setError('Pick at least 3 participants from the directory.')
-      return
-    }
-    setLoading(true)
-    try {
-      const res = await api.createGameByPeople(title, password, selectedIds)
-      try { localStorage.setItem(`adminpw:${res.game_id}`, password) } catch {}
-      navigate(`/game/${res.game_id}/links`)
-    } catch (err: any) {
-      setError(err.message || 'Failed to create game')
-    } finally {
-      setLoading(false)
-    }
-  }
+  const { t } = useI18n()
+  const titleId = useId()
+  const passwordId = useId()
+  const {
+    title,
+    setTitle,
+    password,
+    setPassword,
+    pickerOpen,
+    openPicker,
+    closePicker,
+    handlePickerConfirm,
+    selectedPeople,
+    selectedIds,
+    participantCount,
+    handleSubmit,
+    loading,
+    error,
+    removeSelectedPerson,
+  } = useCreateGameForm(t('brand.title'))
+  const hasSelection = participantCount > 0
 
   return (
     <Layout>
+      <section className="hero-card p-8">
+        <div className="hero-card__content space-y-4 max-w-2xl">
+          <p className="text-sm uppercase tracking-[0.4em] text-white/70">{t('brand.title')}</p>
+          <h1 className="text-4xl md:text-5xl font-semibold text-white drop-shadow-lg">{t('create.title')}</h1>
+          <p className="text-base md:text-lg text-white/80">
+            {t('create.heroCopy', { defaultValue: 'Organiza el intercambio perfecto con un tablero moderno, enlaces mágicos y una presentación digna de clay art.' })}
+          </p>
+          <div className="flex flex-wrap gap-3">
+            <Button onClick={openPicker} type="button">
+              {t('create.pickFromDirectory')}
+            </Button>
+          </div>
+        </div>
+        <div className="hero-card__visual" aria-hidden />
+      </section>
+
       <GlassCard>
-        <h1 className="text-2xl font-semibold mb-4">Create a Game</h1>
-        <form onSubmit={onSubmit} className="space-y-4">
-          <div>
-            <label className="block text-sm mb-1">Title</label>
-            <input value={title} onChange={e=>setTitle(e.target.value)} className="w-full px-3 py-2 rounded-xl bg-white/10 border border-white/20 focus:outline-none" />
-          </div>
-          <div>
-            <label className="block text-sm mb-1">Admin Password</label>
-            <input type="password" value={password} onChange={e=>setPassword(e.target.value)} className="w-full px-3 py-2 rounded-xl bg-white/10 border border-white/20 focus:outline-none" required />
-          </div>
-          <div>
-            <label className="block text-sm mb-1">Participants</label>
-            <div className="flex items-center gap-2">
-              <Button type="button" variant="ghost" onClick={()=>setPickerOpen(true)}>Pick from directory</Button>
-              <span className="text-sm text-slate-300">Selected: {selectedIds.length}</span>
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <FormField label={t('create.form.title')} htmlFor={titleId}>
+            <Input id={titleId} value={title} onChange={e=>setTitle(e.target.value)} />
+          </FormField>
+          <FormField label={t('create.form.password')} htmlFor={passwordId}>
+            <Input id={passwordId} type="password" value={password} onChange={e=>setPassword(e.target.value)} required />
+          </FormField>
+          <FormField
+            label={t('create.form.participants')}
+            actions={
+              <div className="flex items-center gap-2">
+                <Button type="button" variant="ghost" onClick={openPicker}>{t('create.pickFromDirectory')}</Button>
+                <span className="text-sm text-slate-300">{t('common.selectedCount', { count: participantCount })}</span>
+              </div>
+            }
+          >
+            <div className="rounded-[28px] border border-white/10 bg-white/5 p-4 space-y-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.4)]">
+              <p className="text-xs uppercase tracking-wide text-white/70">{t('create.selectionSummary')}</p>
+              {hasSelection ? (
+                <div className="flex flex-wrap gap-3">
+                  {selectedPeople.map(person => (
+                    <Chip
+                      key={person.id}
+                      label={person.name}
+                      onRemove={() => removeSelectedPerson(person.id)}
+                      removeLabel={t('create.removeParticipant', { name: person.name })}
+                    />
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm text-white/70">{t('create.noParticipantsSelected')}</p>
+              )}
             </div>
-          </div>
+          </FormField>
           {error && <p className="text-red-300 text-sm">{error}</p>}
-          <Button type="submit" disabled={loading || selectedIds.length < 3}>{loading ? 'Creating.' : 'Create Game'}</Button>
+          <Button type="submit" disabled={loading || participantCount < 3}>{loading ? t('buttons.creating') : t('buttons.create')}</Button>
         </form>
       </GlassCard>
-      <PeoplePicker open={pickerOpen} onClose={()=>setPickerOpen(false)} onConfirm={(ids)=>{ setSelectedIds(ids); setPickerOpen(false) }} />
+      <PeoplePicker
+        open={pickerOpen}
+        onClose={closePicker}
+        onConfirm={handlePickerConfirm}
+        initialSelected={selectedIds}
+      />
     </Layout>
   )
 }
-

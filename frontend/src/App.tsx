@@ -4,12 +4,10 @@ import GameLinks from './pages/GameLinks'
 import ViewResult from './pages/ViewResult'
 import AdminDashboard from './pages/AdminDashboard'
 import NavBar from './components/NavBar'
-import Background from './components/Background'
 
 export default function App() {
   return (
     <div className="min-h-dvh relative">
-      <Background />
       <NavBar />
       <main className="relative z-10 px-4 pt-24 pb-8">
         <Routes>

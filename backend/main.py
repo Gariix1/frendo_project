@@ -113,6 +113,20 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
     )
 
 
+@app.get("/api/admin/export")
+def export_state(x_master_password: Optional[str] = Header(None)):
+    # Only master can export full state
+    require_master(x_master_password)
+    state = load_state()
+    return JSONResponse(
+        content=state,
+        headers={
+            "Content-Disposition": "attachment; filename=backup.json",
+            "Cache-Control": "no-store",
+        },
+    )
+
+
 @app.post("/api/games", status_code=201)
 def create_game(payload: CreateGameRequest) -> Dict[str, Any]:
     state = load_state()
@@ -331,12 +345,26 @@ def remove_participant(game_id: str, participant_id: str, x_admin_password: Opti
 
 
 @app.post("/api/games/{game_id}/draw")
-def draw_assignments(game_id: str, payload: DrawRequest, x_admin_password: Optional[str] = Header(None)) -> Dict[str, Any]:
+def draw_assignments(game_id: str, payload: Any = Body(None), x_admin_password: Optional[str] = Header(None)) -> Dict[str, Any]:
     state = load_state()
     game = require_admin(state, game_id, x_admin_password)
     if not bool(game.get("active", True)):
         raise HTTPException(status_code=409, detail="game is inactive")
-    if game["any_revealed"] and not payload.force:
+    force_flag = False
+    try:
+        if isinstance(payload, (bytes, bytearray)):
+            payload = payload.decode("utf-8", errors="replace")
+        if isinstance(payload, str):
+            if payload.strip():
+                import json as _json
+                payload = _json.loads(payload)
+            else:
+                payload = None
+        if isinstance(payload, dict):
+            force_flag = bool(payload.get("force", False))
+    except Exception:
+        force_flag = False
+    if game["any_revealed"] and not force_flag:
         raise HTTPException(status_code=409, detail="cannot redraw after reveal started (use force=true)")
     participants = [p for p in game["participants"] if p["active"]]
     if len(participants) < 3:

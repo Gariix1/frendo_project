@@ -1,6 +1,7 @@
 import React, { createContext, PropsWithChildren, useCallback, useContext, useState } from 'react'
 import Modal from './Modal'
 import Button from './Button'
+import { useI18n } from '../i18n/I18nProvider'
 
 type ConfirmOptions = {
   title?: string
@@ -22,6 +23,7 @@ export function useModal() {
 }
 
 export default function ModalProvider({ children }: PropsWithChildren) {
+  const { t } = useI18n()
   const [open, setOpen] = useState(false)
   const [opts, setOpts] = useState<ConfirmOptions>({ message: '' })
   const [resolver, setResolver] = useState<((v: boolean) => void) | null>(null)
@@ -43,14 +45,13 @@ export default function ModalProvider({ children }: PropsWithChildren) {
   return (
     <ModalContext.Provider value={{ confirm }}>
       {children}
-      <Modal open={open} onClose={() => handle(false)} title={opts.title || 'Confirm'}>
+      <Modal open={open} onClose={() => handle(false)} title={opts.title || t('modal.confirmTitle')}>
         <p className="text-slate-200">{opts.message}</p>
         <div className="flex items-center justify-end gap-2">
-          <Button variant="ghost" onClick={() => handle(false)}>{opts.cancelText || 'Cancel'}</Button>
-          <Button onClick={() => handle(true)}>{opts.confirmText || 'Confirm'}</Button>
+          <Button variant="ghost" onClick={() => handle(false)}>{opts.cancelText || t('buttons.cancel')}</Button>
+          <Button onClick={() => handle(true)}>{opts.confirmText || t('buttons.confirm')}</Button>
         </div>
       </Modal>
     </ModalContext.Provider>
   )
 }
-
