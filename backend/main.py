@@ -13,6 +13,9 @@ from .core.middleware import NoStoreCacheMiddleware
 
 load_dotenv()
 
+# App wiring follows this order:
+#  1. load routers (backend/api) -> 2. services -> 3. repositories -> 4. storage/validators
+# This keeps FastAPI concerns separated from business logic (SOLID-friendly).
 app = FastAPI(title="Secret Friend API")
 
 origins = os.getenv("FRONTEND_ORIGINS", "http://localhost:5173").split(",")

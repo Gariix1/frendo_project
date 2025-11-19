@@ -157,6 +157,16 @@ Security notes:
 ---
 
 ## Roadmap (next)
+### Arquitectura Backend
+- **Routers (`backend/api`)**: exponen los endpoints FastAPI y sólo delegan en los servicios.
+- **Servicios (`backend/services`)**: contienen la lógica de negocio y dependen de validadores compartidos.
+- **Repositorios (`backend/repositories`)**: abstraen el acceso al estado (SQLite/JSON) a través de `transact()` y lecturas tipadas.
+- **Validaciones (`backend/models.py`, `backend/services/validators.py`)**: los DTO Pydantic limpian la entrada y los helpers aplican reglas adicionales (duplicados, conteos mínimos, etc.).
+- **Storage (`backend/storage.py`)**: persistencia KV sobre SQLite con migración desde JSON.
+
+### Pruebas
+- Ejecuta `python3 -m unittest backend.tests.test_services backend.tests.test_validators` para correr los tests unitarios.
+- Los tests usan un directorio temporal para no tocar `backend/data.sqlite` y stubs para FastAPI/Pydantic si no están instalados.
 
 - Implement backend endpoints and local JSON persistence.
 - Scaffold frontend pages: CreateGame, GameLinks, ViewResult.

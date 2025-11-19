@@ -4,6 +4,7 @@ from fastapi import APIRouter, Header, Body
 
 from ..models import (
   CreateGameRequest,
+  DrawRequest,
   GameStatusResponse,
   GameSummary,
   UpdateGameRequest,
@@ -14,6 +15,7 @@ from ..models import (
 )
 from ..services import games_service
 from ..core.errors import app_error
+from ..core.error_codes import ErrorCode
 
 router = APIRouter(prefix="/api/games", tags=["games"])
 
@@ -60,7 +62,7 @@ def get_links(game_id: str, x_admin_password: Optional[str] = Header(None)) -> L
 
 @router.post("/{game_id}/participants")
 def add_participants_disabled(game_id: str, x_admin_password: Optional[str] = Header(None)) -> Dict[str, Any]:
-  raise app_error(400, "feature_disabled", "Adding by names is disabled; use /participants/by_ids")
+  raise app_error(400, ErrorCode.FEATURE_DISABLED, "Adding by names is disabled; use /participants/by_ids")
 
 
 @router.post("/{game_id}/participants/by_ids")
@@ -74,7 +76,7 @@ def remove_participant(game_id: str, participant_id: str, x_admin_password: Opti
 
 
 @router.post("/{game_id}/draw")
-def draw_assignments(game_id: str, payload: Any = Body(None), x_admin_password: Optional[str] = Header(None)) -> Dict[str, Any]:
+def draw_assignments(game_id: str, payload: DrawRequest = Body(default=DrawRequest()), x_admin_password: Optional[str] = Header(None)) -> Dict[str, Any]:
   return games_service.draw_assignments(game_id, payload, x_admin_password)
 
 

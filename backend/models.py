@@ -87,6 +87,22 @@ class AddParticipantsRequest(BaseModel):
 class AddParticipantsByIdsRequest(BaseModel):
     person_ids: List[str] = Field(min_items=1)
 
+    @validator("person_ids", pre=True, always=True)
+    def normalize_ids(cls, v: Optional[List[str]]) -> List[str]:
+        if not v:
+            return []
+        cleaned = []
+        seen = set()
+        for pid in v:
+            pid_str = str(pid).strip()
+            if not pid_str or pid_str in seen:
+                continue
+            seen.add(pid_str)
+            cleaned.append(pid_str)
+        if not cleaned:
+            raise ValueError("at least one valid person_id is required")
+        return cleaned
+
 
 class DrawRequest(BaseModel):
     force: bool = False
