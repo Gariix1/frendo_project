@@ -1,11 +1,12 @@
 // Resolve API base:
 // - If VITE_API_BASE is set and non-empty, use it (production, e.g. Render backend URL).
-// - Else use same-origin + /api (dev with Vite proxy).
+// - Else use same-origin relative path (dev relies on Vite proxy at /api).
 // - Fallback to localhost for SSR/build contexts.
-const envBase = (import.meta.env.VITE_API_BASE ?? '') as string
+const rawEnvBase = (import.meta.env.VITE_API_BASE ?? '') as string
+const envBase = rawEnvBase.trim().replace(/\/+$/, '')
 const API_BASE =
-  (envBase && envBase.trim()) ||
-  (typeof window !== 'undefined' ? `${window.location.origin}/api` : 'http://localhost:8000')
+  (envBase && envBase) ||
+  (typeof window !== 'undefined' ? '' : 'http://localhost:8000')
 
 type CreateGameOptions = {
   personIds?: string[]
