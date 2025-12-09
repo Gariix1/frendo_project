@@ -4,9 +4,18 @@
 // - Fallback to localhost for SSR/build contexts.
 const rawEnvBase = (import.meta.env.VITE_API_BASE ?? '') as string
 const envBase = rawEnvBase.trim().replace(/\/+$/, '')
-const API_BASE =
-  (envBase && envBase) ||
-  (typeof window !== 'undefined' ? '' : 'http://localhost:8000')
+
+const inferProdBase = () => {
+  if (typeof window === 'undefined') return ''
+  const host = window.location.hostname.toLowerCase()
+  if (host === 'frendo-project-front.onrender.com') {
+    return 'https://frendo-project.onrender.com'
+  }
+  return ''
+}
+
+const inferred = envBase || inferProdBase()
+const API_BASE = inferred || (typeof window !== 'undefined' ? '' : 'http://localhost:8000')
 
 type CreateGameOptions = {
   personIds?: string[]
