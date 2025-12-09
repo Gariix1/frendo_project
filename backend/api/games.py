@@ -1,6 +1,6 @@
 from typing import Any, Dict, List, Optional
 
-from fastapi import APIRouter, Header, Body
+from fastapi import APIRouter, Header, Request
 
 from ..models import (
   CreateGameRequest,
@@ -22,8 +22,9 @@ router = APIRouter(prefix="/api/games", tags=["games"])
 
 
 @router.post("", status_code=201)
-def create_game(payload: CreateGameRequest) -> Dict[str, Any]:
-  return games_service.create_game(payload)
+def create_game(request: Request, payload: CreateGameRequest) -> Dict[str, Any]:
+  origin = request.headers.get("origin")
+  return games_service.create_game(payload, origin)
 
 
 @router.get("/{game_id}")
@@ -57,8 +58,9 @@ def reactivate_game(game_id: str, x_admin_password: Optional[str] = Header(None)
 
 
 @router.get("/{game_id}/links")
-def get_links(game_id: str, x_admin_password: Optional[str] = Header(None)) -> List[Dict[str, str]]:
-  return games_service.get_links(game_id, x_admin_password)
+def get_links(game_id: str, request: Request, x_admin_password: Optional[str] = Header(None)) -> List[Dict[str, str]]:
+  origin = request.headers.get("origin")
+  return games_service.get_links(game_id, x_admin_password, origin)
 
 
 @router.post("/{game_id}/participants")
@@ -77,7 +79,15 @@ def remove_participant(game_id: str, participant_id: str, x_admin_password: Opti
 
 
 @router.post("/{game_id}/draw")
-def draw_assignments(game_id: str, payload: DrawRequest = Body(default=DrawRequest()), x_admin_password: Optional[str] = Header(None)) -> Dict[str, Any]:
+async def draw_assignments(game_id: str, request: Request, x_admin_password: Optional[str] = Header(None)) -> Dict[str, Any]:
+  data: Dict[str, Any] = {}
+  try:
+    incoming = await request.json()
+    if isinstance(incoming, dict):
+      data = incoming
+  except Exception:
+    data = {}
+  payload = DrawRequest(**data) if data else DrawRequest()
   return games_service.draw_assignments(game_id, payload, x_admin_password)
 
 

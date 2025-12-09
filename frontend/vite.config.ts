@@ -13,8 +13,16 @@ export default defineConfig({
   server: {
     port: 5173,
     host: true,
+    // Allow access when served behind tunnels (e.g., ngrok) without host blocking.
+    allowedHosts: true,
     fs: {
       allow: [projectRootDir, sharedDir],
+    },
+    proxy: {
+      '/api': {
+        target: 'http://127.0.0.1:8000',
+        changeOrigin: true,
+      },
     },
   },
   resolve: {

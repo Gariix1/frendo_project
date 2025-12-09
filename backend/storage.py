@@ -5,7 +5,7 @@ import threading
 from contextlib import contextmanager
 from typing import Iterator
 
-from .types import AppState
+from .app_types import AppState
 
 DATA_DIR = os.path.join(os.path.dirname(__file__))
 JSON_FALLBACK = os.path.join(DATA_DIR, "data.json")

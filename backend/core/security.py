@@ -4,7 +4,7 @@ from typing import Optional
 from .errors import app_error
 from .error_codes import ErrorCode
 from ..utils import verify_password
-from ..types import AppState, GameRecord
+from ..app_types import AppState, GameRecord
 
 
 def require_admin(state: AppState, game_id: str, admin_password: Optional[str]) -> GameRecord:

@@ -1,7 +1,7 @@
 from typing import Callable, List, Optional, TypeVar
 
 from ..storage import load_state, edit_state
-from ..types import AppState, GameRecord, ParticipantRecord
+from ..app_types import AppState, GameRecord, ParticipantRecord
 
 T = TypeVar("T")
 

@@ -26,7 +26,7 @@ from ..core.errors import app_error
 from ..core.error_codes import ErrorCode
 from ..core.security import require_admin
 from ..core.time import now_iso
-from ..types import AppState, ParticipantRecord, GameParticipantPair, WishListItemRecord
+from ..app_types import AppState, ParticipantRecord, GameParticipantPair, WishListItemRecord
 from .validators import ensure_min_participants, normalize_and_check_name, ensure_game_exists
 
 game_repo = GameRepository()  # shared repo instance for all handlers
@@ -66,7 +66,7 @@ def _wish_list_response(participant: ParticipantRecord) -> List[WishListItemResp
   return [WishListItemResponse(**item) for item in items]  # type: ignore[arg-type]
 
 
-def create_game(payload: CreateGameRequest) -> Dict[str, str]:
+def create_game(payload: CreateGameRequest, origin: Optional[str] = None) -> Dict[str, str]:
   def _mutate(state: AppState) -> Dict[str, str]:
     gid = generate_game_id()
     while gid in state["games"]:
@@ -105,7 +105,7 @@ def create_game(payload: CreateGameRequest) -> Dict[str, str]:
       "any_revealed": False,
       "participants": participants,
     }
-    return {"game_id": gid, "share_base_url": get_share_base_url()}
+    return {"game_id": gid, "share_base_url": get_share_base_url(origin)}
   return game_repo.transact(_mutate)
 
 
@@ -179,10 +179,10 @@ def set_game_active(game_id: str, admin_password: Optional[str], active: bool) -
   return game_repo.transact(_mutate)
 
 
-def get_links(game_id: str, admin_password: Optional[str]) -> List[Dict[str, str]]:
+def get_links(game_id: str, admin_password: Optional[str], origin: Optional[str] = None) -> List[Dict[str, str]]:
   state = game_repo.get_state()
   game = require_admin(state, game_id, admin_password)
-  base = get_share_base_url().rstrip("/")
+  base = get_share_base_url(origin).rstrip("/")
   return [
     {
       "participant_id": p["id"],
@@ -197,6 +197,8 @@ def get_links(game_id: str, admin_password: Optional[str]) -> List[Dict[str, str
 def add_participants_by_ids(game_id: str, payload: AddParticipantsByIdsRequest, admin_password: Optional[str]) -> Dict[str, List[Dict[str, str]]]:
   def _mutate(state: AppState) -> Dict[str, List[Dict[str, str]]]:
     game = require_admin(state, game_id, admin_password)
+    if int(game.get("assignment_version", 0)) > 0:
+      raise app_error(409, ErrorCode.GAME_REVEAL_CONFLICT, "Cannot add participants after draw has been performed")
     if game["any_revealed"]:
       raise app_error(409, ErrorCode.GAME_REVEAL_CONFLICT, "Cannot add participants after reveal started")
     people = {p["id"]: p for p in state.get("people", []) if p.get("active", True)}
@@ -228,6 +230,8 @@ def add_participants_by_ids(game_id: str, payload: AddParticipantsByIdsRequest, 
 def remove_participant(game_id: str, participant_id: str, admin_password: Optional[str]) -> None:
   def _mutate(state: AppState) -> None:
     game = require_admin(state, game_id, admin_password)
+    if int(game.get("assignment_version", 0)) > 0:
+      raise app_error(409, ErrorCode.GAME_REVEAL_CONFLICT, "Cannot remove participants after draw has been performed")
     if game["any_revealed"]:
       raise app_error(409, ErrorCode.GAME_REVEAL_CONFLICT, "Cannot remove participants after reveal started")
     before = len(game["participants"])
@@ -389,7 +393,10 @@ def get_wish_list_by_token(game_id: str, token: str) -> Dict[str, List[WishListI
   pair = _find_game_and_participant(state, game_id, token)
   if not pair:
     raise app_error(404, ErrorCode.LINK_NOT_FOUND, "Link not found")
+  game = pair["game"]
   participant = pair["participant"]
+  if not bool(game.get("active", True)) or not participant["active"]:
+    raise app_error(404, ErrorCode.LINK_NOT_FOUND, "Link not found")
   return {"items": _wish_list_response(participant)}
 
 
@@ -398,7 +405,10 @@ def add_wish_list_item_by_token(game_id: str, token: str, payload: WishListItemR
     pair = _find_game_and_participant(state, game_id, token)
     if not pair:
       raise app_error(404, ErrorCode.LINK_NOT_FOUND, "Link not found")
+    game = pair["game"]
     participant = pair["participant"]
+    if not bool(game.get("active", True)) or not participant["active"]:
+      raise app_error(404, ErrorCode.LINK_NOT_FOUND, "Link not found")
     items = _ensure_wish_list(participant)
     item = _create_wish_item(payload)
     items.append(item)
@@ -412,7 +422,10 @@ def remove_wish_list_item_by_token(game_id: str, token: str, item_id: str) -> Di
     pair = _find_game_and_participant(state, game_id, token)
     if not pair:
       raise app_error(404, ErrorCode.LINK_NOT_FOUND, "Link not found")
+    game = pair["game"]
     participant = pair["participant"]
+    if not bool(game.get("active", True)) or not participant["active"]:
+      raise app_error(404, ErrorCode.LINK_NOT_FOUND, "Link not found")
     items = _ensure_wish_list(participant)
     before = len(items)
     participant["wish_list"] = [item for item in items if item.get("id") != item_id]

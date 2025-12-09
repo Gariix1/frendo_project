@@ -1,7 +1,7 @@
 from typing import Callable, List, TypeVar
 
 from ..storage import load_state, edit_state
-from ..types import AppState, PersonRecord
+from ..app_types import AppState, PersonRecord
 
 T = TypeVar("T")
 
