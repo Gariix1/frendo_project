@@ -1,5 +1,11 @@
-// Allow empty string to use same origin + proxy (dev with Vite). Fallback to localhost if undefined.
-const API_BASE = (import.meta.env.VITE_API_BASE ?? 'http://localhost:8000') as string
+// Resolve API base:
+// - If VITE_API_BASE is set and non-empty, use it (production, e.g. Render backend URL).
+// - Else use same-origin + /api (dev with Vite proxy).
+// - Fallback to localhost for SSR/build contexts.
+const envBase = (import.meta.env.VITE_API_BASE ?? '') as string
+const API_BASE =
+  (envBase && envBase.trim()) ||
+  (typeof window !== 'undefined' ? `${window.location.origin}/api` : 'http://localhost:8000')
 
 type CreateGameOptions = {
   personIds?: string[]
