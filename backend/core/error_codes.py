@@ -27,3 +27,4 @@ class ErrorCode(str, Enum):
   INVALID_PAYLOAD_BYTES = "invalid_payload_bytes"
   INVALID_REQUEST_BODY = "invalid_request_body"
   INVALID_PEOPLE_REQUEST = "invalid_people_request"
+  WISHLIST_ITEM_NOT_FOUND = "wishlist_item_not_found"

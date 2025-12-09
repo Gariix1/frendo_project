@@ -12,6 +12,7 @@ from ..models import (
   UpdateParticipantRequest,
   ParticipantPreviewResponse,
   RevealResponse,
+  WishListItemRequest,
 )
 from ..services import games_service
 from ..core.errors import app_error
@@ -103,3 +104,33 @@ def reveal_assignment(game_id: str, token: str) -> RevealResponse:
 @router.patch("/{game_id}/participants/{participant_id}")
 def rename_participant(game_id: str, participant_id: str, payload: UpdateParticipantRequest, x_admin_password: Optional[str] = Header(None)) -> Dict[str, Any]:
   return games_service.rename_participant(game_id, participant_id, payload, x_admin_password)
+
+
+@router.get("/{game_id}/participants/{participant_id}/wishlist")
+def get_participant_wishlist(game_id: str, participant_id: str, x_admin_password: Optional[str] = Header(None)) -> Dict[str, Any]:
+  return games_service.get_wish_list_admin(game_id, participant_id, x_admin_password)
+
+
+@router.post("/{game_id}/participants/{participant_id}/wishlist")
+def add_participant_wishlist_item(game_id: str, participant_id: str, payload: WishListItemRequest, x_admin_password: Optional[str] = Header(None)) -> Dict[str, Any]:
+  return games_service.add_wish_list_item_admin(game_id, participant_id, payload, x_admin_password)
+
+
+@router.delete("/{game_id}/participants/{participant_id}/wishlist/{item_id}")
+def remove_participant_wishlist_item(game_id: str, participant_id: str, item_id: str, x_admin_password: Optional[str] = Header(None)) -> Dict[str, Any]:
+  return games_service.remove_wish_list_item_admin(game_id, participant_id, item_id, x_admin_password)
+
+
+@router.get("/{game_id}/{token}/wishlist")
+def get_wishlist_by_token(game_id: str, token: str) -> Dict[str, Any]:
+  return games_service.get_wish_list_by_token(game_id, token)
+
+
+@router.post("/{game_id}/{token}/wishlist")
+def add_wishlist_item_by_token(game_id: str, token: str, payload: WishListItemRequest) -> Dict[str, Any]:
+  return games_service.add_wish_list_item_by_token(game_id, token, payload)
+
+
+@router.delete("/{game_id}/{token}/wishlist/{item_id}")
+def remove_wishlist_item_by_token(game_id: str, token: str, item_id: str) -> Dict[str, Any]:
+  return games_service.remove_wish_list_item_by_token(game_id, token, item_id)

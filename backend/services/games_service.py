@@ -1,4 +1,4 @@
-from typing import Dict, List, Optional, Set
+from typing import Any, Dict, List, Optional, Set
 
 from ..models import (
   CreateGameRequest,
@@ -11,6 +11,8 @@ from ..models import (
   UpdateParticipantRequest,
   ParticipantPreviewResponse,
   RevealResponse,
+  WishListItemRequest,
+  WishListItemResponse,
 )
 from ..repositories.games_repository import GameRepository
 from ..utils import (
@@ -24,7 +26,7 @@ from ..core.errors import app_error
 from ..core.error_codes import ErrorCode
 from ..core.security import require_admin
 from ..core.time import now_iso
-from ..types import AppState, ParticipantRecord, GameParticipantPair
+from ..types import AppState, ParticipantRecord, GameParticipantPair, WishListItemRecord
 from .validators import ensure_min_participants, normalize_and_check_name, ensure_game_exists
 
 game_repo = GameRepository()  # shared repo instance for all handlers
@@ -40,7 +42,28 @@ def _build_participant_record(idx: int, name: str, person_id: Optional[str] = No
     "viewed": False,
     "viewed_at": None,
     "active": True,
+    "wish_list": [],
   }
+
+
+def _ensure_wish_list(participant: ParticipantRecord) -> List[WishListItemRecord]:
+  if "wish_list" not in participant or participant["wish_list"] is None:
+    participant["wish_list"] = []
+  return participant["wish_list"]  # type: ignore
+
+
+def _create_wish_item(payload: WishListItemRequest) -> WishListItemRecord:
+  return {
+    "id": generate_token(6),
+    "title": payload.title.strip(),
+    "price": payload.price,
+    "url": (payload.url.strip() if payload.url else None),
+  }
+
+
+def _wish_list_response(participant: ParticipantRecord) -> List[WishListItemResponse]:
+  items = participant.get("wish_list") or []
+  return [WishListItemResponse(**item) for item in items]  # type: ignore[arg-type]
 
 
 def create_game(payload: CreateGameRequest) -> Dict[str, str]:
@@ -257,8 +280,17 @@ def _find_game_and_participant(state: AppState, game_id: str, token: str) -> Opt
     return None
   for p in game["participants"]:
     if p["token"] == token:
+      _ensure_wish_list(p)
       return {"game": game, "participant": p}
   return None
+
+
+def _get_participant_by_id(game: Dict[str, Any], participant_id: str) -> ParticipantRecord:
+  for participant in game.get("participants", []):
+    if participant["id"] == participant_id:
+      _ensure_wish_list(participant)
+      return participant  # type: ignore
+  raise app_error(404, ErrorCode.PARTICIPANT_NOT_FOUND, "Participant not found")
 
 
 def participant_preview(game_id: str, token: str) -> ParticipantPreviewResponse:
@@ -288,14 +320,16 @@ def reveal_assignment(game_id: str, token: str) -> RevealResponse:
       raise app_error(409, ErrorCode.ASSIGNMENT_NOT_READY, "Draw not performed yet")
     if participant["viewed"]:
       raise app_error(409, ErrorCode.ASSIGNMENT_ALREADY_VIEWED, "Already revealed")
-    assigned_name = next((p["name"] for p in game["participants"] if p["id"] == assigned_id), None)
-    if not assigned_name:
+    assigned_participant = next((p for p in game["participants"] if p["id"] == assigned_id), None)
+    if not assigned_participant:
       raise app_error(500, ErrorCode.INVALID_ASSIGNMENT_STATE, "Invalid assignment state")
+    _ensure_wish_list(assigned_participant)
+    assigned_name = assigned_participant["name"]
     participant["viewed"] = True
     participant["viewed_at"] = now_iso()
     game["any_revealed"] = True
     game["updated_at"] = now_iso()
-    return RevealResponse(assigned_to=assigned_name)
+    return RevealResponse(assigned_to=assigned_name, wish_list=_wish_list_response(assigned_participant))
   return game_repo.transact(_mutate)
 
 
@@ -313,5 +347,77 @@ def rename_participant(game_id: str, participant_id: str, payload: UpdatePartici
       raise app_error(404, ErrorCode.PARTICIPANT_NOT_FOUND, "Participant not found")
     target["name"] = new_name
     game["updated_at"] = now_iso()
+    return {"ok": True}
+  return game_repo.transact(_mutate)
+
+
+def get_wish_list_admin(game_id: str, participant_id: str, admin_password: Optional[str]) -> Dict[str, List[WishListItemResponse]]:
+  state = game_repo.get_state()
+  game = require_admin(state, game_id, admin_password)
+  participant = _get_participant_by_id(game, participant_id)
+  return {"items": _wish_list_response(participant)}
+
+
+def add_wish_list_item_admin(game_id: str, participant_id: str, payload: WishListItemRequest, admin_password: Optional[str]) -> Dict[str, WishListItemResponse]:
+  def _mutate(state: AppState) -> Dict[str, WishListItemResponse]:
+    game = require_admin(state, game_id, admin_password)
+    participant = _get_participant_by_id(game, participant_id)
+    items = _ensure_wish_list(participant)
+    item = _create_wish_item(payload)
+    items.append(item)
+    game["updated_at"] = now_iso()
+    return {"item": WishListItemResponse(**item)}
+  return game_repo.transact(_mutate)
+
+
+def remove_wish_list_item_admin(game_id: str, participant_id: str, item_id: str, admin_password: Optional[str]) -> Dict[str, bool]:
+  def _mutate(state: AppState) -> Dict[str, bool]:
+    game = require_admin(state, game_id, admin_password)
+    participant = _get_participant_by_id(game, participant_id)
+    items = _ensure_wish_list(participant)
+    before = len(items)
+    participant["wish_list"] = [item for item in items if item.get("id") != item_id]
+    if len(participant["wish_list"]) == before:
+      raise app_error(404, ErrorCode.WISHLIST_ITEM_NOT_FOUND, "Wishlist item not found")
+    game["updated_at"] = now_iso()
+    return {"ok": True}
+  return game_repo.transact(_mutate)
+
+
+def get_wish_list_by_token(game_id: str, token: str) -> Dict[str, List[WishListItemResponse]]:
+  state = game_repo.get_state()
+  pair = _find_game_and_participant(state, game_id, token)
+  if not pair:
+    raise app_error(404, ErrorCode.LINK_NOT_FOUND, "Link not found")
+  participant = pair["participant"]
+  return {"items": _wish_list_response(participant)}
+
+
+def add_wish_list_item_by_token(game_id: str, token: str, payload: WishListItemRequest) -> Dict[str, WishListItemResponse]:
+  def _mutate(state: AppState) -> Dict[str, WishListItemResponse]:
+    pair = _find_game_and_participant(state, game_id, token)
+    if not pair:
+      raise app_error(404, ErrorCode.LINK_NOT_FOUND, "Link not found")
+    participant = pair["participant"]
+    items = _ensure_wish_list(participant)
+    item = _create_wish_item(payload)
+    items.append(item)
+    pair["game"]["updated_at"] = now_iso()
+    return {"item": WishListItemResponse(**item)}
+  return game_repo.transact(_mutate)
+
+
+def remove_wish_list_item_by_token(game_id: str, token: str, item_id: str) -> Dict[str, bool]:
+  def _mutate(state: AppState) -> Dict[str, bool]:
+    pair = _find_game_and_participant(state, game_id, token)
+    if not pair:
+      raise app_error(404, ErrorCode.LINK_NOT_FOUND, "Link not found")
+    participant = pair["participant"]
+    items = _ensure_wish_list(participant)
+    before = len(items)
+    participant["wish_list"] = [item for item in items if item.get("id") != item_id]
+    if len(participant["wish_list"]) == before:
+      raise app_error(404, ErrorCode.WISHLIST_ITEM_NOT_FOUND, "Wishlist item not found")
+    pair["game"]["updated_at"] = now_iso()
     return {"ok": True}
   return game_repo.transact(_mutate)

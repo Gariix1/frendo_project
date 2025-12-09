@@ -80,7 +80,17 @@ Global directory endpoints (optional) use `X-Master-Password: <password>` if `MA
 
 - Reveal (consuming)
   - POST `/api/games/{id}/{token}/reveal`
-  - 200 first time `{ assigned_to }`; 409 on subsequent calls with a friendly message
+  - 200 first time `{ assigned_to, wish_list }`; 409 on subsequent calls with un mensaje amistoso
+
+- Wish list (admin)
+  - GET `/api/games/{id}/participants/{participantId}/wishlist` (header admin) → `{ items: [...] }`
+  - POST same path with body `{ title, price?, url? }` → agrega ítem
+  - DELETE `/api/games/{id}/participants/{participantId}/wishlist/{itemId}` → elimina ítem
+
+- Wish list (participante, usando su token)
+  - GET `/api/games/{id}/{token}/wishlist`
+  - POST `/api/games/{id}/{token}/wishlist` con `{ title, price?, url? }`
+  - DELETE `/api/games/{id}/{token}/wishlist/{itemId}`
 
 Common status codes: 400 validation, 401 admin auth error, 404 not found, 409 conflict.
 
@@ -143,8 +153,14 @@ Prerequisites:
 Backend (FastAPI):
 - Install: `pip install fastapi uvicorn[standard] pydantic bcrypt python-multipart`
 - Env: `SHARE_BASE_URL` (e.g., `http://localhost:5173`)
-- Dev run: `uvicorn backend.main:app --reload`
+- Dev run (local only): `uvicorn backend.main:app --reload`
+- Dev run (expose to LAN): `uvicorn backend.main:app --host 0.0.0.0 --port 8000`
 - Data file: `backend/data.json` (created on first run)
+
+Frontend (React + Vite + Tailwind):
+- Install deps: `npm install`
+- Env: set `VITE_API_BASE` to the reachable backend URL (e.g., `http://localhost:8000` or `http://<tu-ip-lan>:8000` in `.env`)
+- Dev run: `npm run dev` (Vite muestra URLs localhost y de red; comparte la de red si otros dispositivos deben acceder)
 
 Frontend (React + Vite + Tailwind):
 - Install deps: `npm install`

@@ -108,6 +108,19 @@ class DrawRequest(BaseModel):
     force: bool = False
 
 
+class WishListItemRequest(BaseModel):
+    title: str = Field(min_length=1, max_length=120)
+    price: Optional[float] = Field(None, ge=0)
+    url: Optional[str] = Field(default=None, max_length=500)
+
+
+class WishListItemResponse(BaseModel):
+    id: str
+    title: str
+    price: Optional[float] = None
+    url: Optional[str] = None
+
+
 class GameStatusParticipant(BaseModel):
     id: str
     name: str
@@ -182,3 +195,4 @@ class ParticipantPreviewResponse(BaseModel):
 
 class RevealResponse(BaseModel):
     assigned_to: str
+    wish_list: List[WishListItemResponse]

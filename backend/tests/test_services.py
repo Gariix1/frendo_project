@@ -10,6 +10,8 @@ from backend.models import (
   AddParticipantsByIdsRequest,
   UpdateParticipantRequest,
   DrawRequest,
+  WishListItemRequest,
+  CreatePeopleRequest,
 )
 from backend.core import errors as core_errors
 
@@ -93,13 +95,37 @@ class GamesServiceTests(ServiceTestCase):
     updated = games_service.get_game_status(gid, "admin123")
     self.assertEqual(len(updated.participants), len(status.participants) - 1)
 
+  def test_wishlist_flow(self):
+    gid = self.create_base_game()
+    status = games_service.get_game_status(gid, "admin123")
+    target = status.participants[0]
+    resp = games_service.add_wish_list_item_admin(
+      gid,
+      target.id,
+      WishListItemRequest(title="Libro", price=20.5, url="https://example.com"),
+      "admin123",
+    )
+    self.assertEqual(resp["item"].title, "Libro")
+    wishlist = games_service.get_wish_list_admin(gid, target.id, "admin123")
+    self.assertEqual(len(wishlist["items"]), 1)
+    token_resp = games_service.get_wish_list_by_token(gid, target.token)
+    self.assertEqual(len(token_resp["items"]), 1)
+    games_service.add_wish_list_item_by_token(gid, target.token, WishListItemRequest(title="Bufanda"))
+    token_wishlist = games_service.get_wish_list_by_token(gid, target.token)
+    self.assertEqual(len(token_wishlist["items"]), 2)
+    item_id = token_wishlist["items"][0].id
+    games_service.remove_wish_list_item_by_token(gid, target.token, item_id)
+    token_wishlist_after = games_service.get_wish_list_by_token(gid, target.token)
+    self.assertEqual(len(token_wishlist_after["items"]), 1)
+
 
 class PeopleServiceTests(ServiceTestCase):
   def test_add_and_rename_people(self):
-    resp = people_service.add_people({"names": [" Ana ", "Bea"]}, None)
+    payload = CreatePeopleRequest(names=[" Ana ", "Bea"])
+    resp = people_service.add_people(payload, None)
     self.assertEqual(len(resp["added"]), 2)
     with self.assertRaises(HTTPException):
-      people_service.add_people({"names": ["Dani", "Dani"]}, None)
+      people_service.add_people(CreatePeopleRequest(names=["Dani", "Dani"]), None)
     added_id = resp["added"][0]["id"]
     rename_payload = UpdateParticipantRequest(name="Carla")
     rename_resp = people_service.rename_person(added_id, rename_payload, None)

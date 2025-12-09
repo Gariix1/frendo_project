@@ -80,6 +80,10 @@ def _load_from_conn(conn: sqlite3.Connection) -> AppState:
         data["games"] = {}
     if "people" not in data:
         data["people"] = []
+    for game in data["games"].values():
+        for participant in game.get("participants", []):
+            if "wish_list" not in participant or participant["wish_list"] is None:
+                participant["wish_list"] = []
     return data
 
 

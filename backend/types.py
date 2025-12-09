@@ -1,6 +1,13 @@
 from typing import Dict, List, Optional, TypedDict
 
 
+class WishListItemRecord(TypedDict, total=False):
+  id: str
+  title: str
+  price: Optional[float]
+  url: Optional[str]
+
+
 class ParticipantRecord(TypedDict, total=False):
   id: str
   person_id: Optional[str]
@@ -10,6 +17,7 @@ class ParticipantRecord(TypedDict, total=False):
   viewed: bool
   viewed_at: Optional[str]
   active: bool
+  wish_list: List[WishListItemRecord]
 
 
 class GameRecord(TypedDict):

@@ -2,7 +2,7 @@ from typing import Any, Dict, List, Optional
 
 from fastapi import APIRouter, Header
 
-from ..models import Person, UpdateParticipantRequest
+from ..models import Person, UpdateParticipantRequest, CreatePeopleRequest
 from ..services import people_service
 
 router = APIRouter(prefix="/api/people", tags=["people"])
@@ -14,7 +14,7 @@ def list_people() -> List[Person]:
 
 
 @router.post("")
-def add_people(payload: Any, x_master_password: Optional[str] = Header(None)) -> Dict[str, Any]:
+def add_people(payload: CreatePeopleRequest, x_master_password: Optional[str] = Header(None)) -> Dict[str, Any]:
   return people_service.add_people(payload, x_master_password)
 
 

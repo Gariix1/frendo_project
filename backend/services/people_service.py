@@ -1,3 +1,4 @@
+import json
 from typing import Any, Dict, List, Optional, Set
 
 from ..models import Person, CreatePeopleRequest, UpdateParticipantRequest
@@ -17,25 +18,27 @@ def list_people() -> List[Person]:
   return people
 
 
-def add_people(payload: Any, master_password: Optional[str]) -> Dict[str, Any]:
-  require_master(master_password)
+def _coerce_people_request(payload: Any) -> CreatePeopleRequest:
+  if isinstance(payload, CreatePeopleRequest):
+    return payload
   if isinstance(payload, (bytes, bytearray)):
-    try:
-      payload = payload.decode("utf-8", errors="replace")
-    except Exception:
-      raise app_error(400, ErrorCode.INVALID_PAYLOAD_BYTES, "Invalid payload bytes")
+    payload = payload.decode("utf-8", errors="replace")
   if isinstance(payload, str):
-    import json as _json
     try:
-      payload = _json.loads(payload)
+      payload = json.loads(payload)
     except Exception:
       raise app_error(400, ErrorCode.INVALID_REQUEST_BODY, 'Invalid JSON body. Expected { "names": ["Ana"] }')
-  if not isinstance(payload, dict):
-    raise app_error(400, ErrorCode.INVALID_REQUEST_BODY, "Invalid JSON body. Expected an object with a 'names' array")
-  try:
-    model = CreatePeopleRequest(**payload)
-  except Exception as exc:
-    raise app_error(400, ErrorCode.INVALID_PEOPLE_REQUEST, str(exc))
+  if isinstance(payload, dict):
+    try:
+      return CreatePeopleRequest(**payload)
+    except Exception as exc:
+      raise app_error(400, ErrorCode.INVALID_PEOPLE_REQUEST, str(exc))
+  raise app_error(400, ErrorCode.INVALID_REQUEST_BODY, "Invalid JSON body. Expected an object with a 'names' array")
+
+
+def add_people(payload: Any, master_password: Optional[str]) -> Dict[str, Any]:
+  require_master(master_password)
+  model = _coerce_people_request(payload)
 
   def _mutate(state):
     existing = {p["name"].strip().lower(): p for p in state.get("people", [])}
