@@ -5,6 +5,7 @@ import { api } from '../lib/api'
 import { useI18n } from '../i18n/I18nProvider'
 import { validationRules } from '../lib/validation'
 import AnimatedText from './AnimatedText'
+import Input from './Input'
 
 type Person = { id: string; name: string; active: boolean }
 
@@ -57,9 +58,10 @@ export default function PeoplePicker({ open, onClose, onConfirm, initialSelected
 
   return (
     <Modal open={open} onClose={onClose} title={t('peoplePicker.title')}>
-      <input
-        className="w-full px-3 py-2 rounded-xl bg-white/10 border border-light/30 text-slate-100 placeholder:text-slate-300/60 focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary/50"
-        placeholder={t('peoplePicker.searchPlaceholder')} value={query} onChange={e=>setQuery(e.target.value)}
+      <Input
+        placeholder={t('peoplePicker.searchPlaceholder')}
+        value={query}
+        onChange={e=>setQuery(e.target.value)}
       />
       <div className="max-h-80 overflow-auto rounded-2xl border border-white/20 p-2 bg-white/5">
         {filtered.map(p => (

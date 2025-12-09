@@ -1,4 +1,5 @@
-const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:8000'
+// Allow empty string to use same origin + proxy (dev with Vite). Fallback to localhost if undefined.
+const API_BASE = (import.meta.env.VITE_API_BASE ?? 'http://localhost:8000') as string
 
 type CreateGameOptions = {
   personIds?: string[]
@@ -10,26 +11,33 @@ async function request(path: string, init?: RequestInit) {
     headers: { 'Content-Type': 'application/json', ...(init?.headers || {}) },
     ...init,
   })
+  const isNoContent = res.status === 204 || res.status === 205
+  const contentType = res.headers.get('content-type') || ''
+
   if (!res.ok) {
     let message = res.statusText
     let code: string | undefined
-    try {
-      const data = await res.json()
-      if (data) {
-        if (typeof data.detail === 'string') {
-          message = data.detail
-        } else if (data.detail && typeof data.detail === 'object') {
-          message = data.detail.message || message
-          code = data.detail.code || code
+    if (!isNoContent && contentType.includes('application/json')) {
+      try {
+        const data = await res.json()
+        if (data) {
+          if (typeof data.detail === 'string') {
+            message = data.detail
+          } else if (data.detail && typeof data.detail === 'object') {
+            message = data.detail.message || message
+            code = data.detail.code || code
+          }
+          if (!code && typeof data.code === 'string') {
+            code = data.code
+          }
+          if ((!message || message === res.statusText) && typeof data.message === 'string') {
+            message = data.message
+          }
         }
-        if (!code && typeof data.code === 'string') {
-          code = data.code
-        }
-        if ((!message || message === res.statusText) && typeof data.message === 'string') {
-          message = data.message
-        }
+      } catch {
+        try { message = await res.text() } catch {}
       }
-    } catch {
+    } else if (!isNoContent) {
       try { message = await res.text() } catch {}
     }
     const err = new Error(message || res.statusText) as Error & { status?: number; code?: string }
@@ -37,8 +45,13 @@ async function request(path: string, init?: RequestInit) {
     if (code) err.code = code
     throw err
   }
-  const ct = res.headers.get('content-type') || ''
-  if (ct.includes('application/json')) return res.json()
+
+  if (isNoContent) return null
+  if (contentType.includes('application/json')) {
+    const text = await res.text()
+    if (!text) return null
+    return JSON.parse(text)
+  }
   return null
 }
 

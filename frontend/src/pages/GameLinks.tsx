@@ -18,6 +18,7 @@ import ParticipantRow from '../components/ParticipantRow'
 import FormSection from '../components/FormSection'
 import ConfirmDialog from '../components/ConfirmDialog'
 import CardSurface from '../components/CardSurface'
+import Input from '../components/Input'
 import { validators, formatValidationError, normalizeWhitespace } from '../lib/validation'
 
 type Person = { id: string; name: string; active: boolean }
@@ -78,6 +79,11 @@ export default function GameLinks() {
       setLoading(false)
     }
   }
+
+  useEffect(() => {
+    if (!gameId || !adminPassword || loading || links) return
+    void fetchLinks()
+  }, [gameId, adminPassword])
 
   const loadPeople = useCallback(async () => {
     try {
@@ -194,12 +200,27 @@ export default function GameLinks() {
           description={t('labels.adminPassword')}
           action={<Button onClick={fetchLinks} disabled={!adminPassword || loading}>{loading ? t('buttons.loading') : t('buttons.loadLinks')}</Button>}
         >
-          <input type="password" value={adminPassword} onChange={e=>setAdminPassword(e.target.value)} className="w-full px-3 py-2 rounded-xl bg-white/10 border border-light/30 text-slate-100 placeholder:text-slate-300/60 focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary/50" />
+          <Input type="password" value={adminPassword} onChange={e=>setAdminPassword(e.target.value)} placeholder={t('labels.adminPassword')} />
+          {assignmentVersion !== null && (
+            <div className="flex flex-wrap items-center gap-2 text-sm text-white/80">
+              <Tag text={assignmentVersion > 0 ? t('draw.statusDrawn', { version: assignmentVersion }) : t('draw.statusNotDrawn')} />
+              {anyRevealed && <Tag text={t('draw.statusRevealed')} />}
+            </div>
+          )}
           <div className="flex flex-wrap items-center gap-2">
-            <Button variant="ghost" onClick={() => doDraw(false)} disabled={!adminPassword || loading || anyRevealed}>{assignmentVersion && assignmentVersion > 0 ? t('draw.redraw') : t('draw.draw')}</Button>
-            {anyRevealed && (
-              <Button variant="accent" onClick={() => setConfirmForce(true)} disabled={!adminPassword || loading}>{t('draw.forceRedraw')}</Button>
-            )}
+            <Button
+              variant={anyRevealed ? 'accent' : 'ghost'}
+              onClick={() => {
+                if (anyRevealed) {
+                  setConfirmForce(true)
+                } else {
+                  void doDraw(false)
+                }
+              }}
+              disabled={!adminPassword || loading}
+            >
+              {anyRevealed ? t('draw.forceRedraw') : assignmentVersion && assignmentVersion > 0 ? t('draw.redraw') : t('draw.draw')}
+            </Button>
           </div>
           {assignmentVersion === 0 && (
             <p className="text-amber-300 text-sm">{t('warnings.noDrawYet')}</p>
@@ -284,7 +305,7 @@ export default function GameLinks() {
         confirmText={t('confirm.forceRedraw.cta')}
         variant="danger"
         confirmVariant="danger"
-        onConfirm={() => doDraw(true)}
+        onConfirm={async () => { setConfirmForce(false); await doDraw(true) }}
         onClose={() => setConfirmForce(false)}
       />
       

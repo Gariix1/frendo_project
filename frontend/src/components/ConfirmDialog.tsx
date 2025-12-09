@@ -1,6 +1,7 @@
 import Modal from './Modal'
 import Button from './Button'
 import { useI18n } from '../i18n/I18nProvider'
+import DialogActions from './DialogActions'
 
 type Variant = 'default' | 'primary' | 'danger' | 'success'
 
@@ -38,10 +39,10 @@ export default function ConfirmDialog({
     <Modal open={open} onClose={onClose} title={title} variant={variant} size="sm">
       <div className="space-y-4">
         <p className="text-sm text-white/80">{message}</p>
-        <div className="flex justify-end gap-2">
+        <DialogActions>
           <Button variant="ghost" onClick={onClose}>{cancelText || t('buttons.cancel')}</Button>
           <Button variant={confirmVariant === 'danger' ? 'accent' : confirmVariant} onClick={handleConfirm}>{confirmText || t('common.ok')}</Button>
-        </div>
+        </DialogActions>
       </div>
     </Modal>
   )

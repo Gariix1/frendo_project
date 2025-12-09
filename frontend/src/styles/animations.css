@@ -1,0 +1,32 @@
+/* Centralized keyframes/classes for animated UI text & transitions */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeOut {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+}
+
+.animate-fadeIn {
+  animation: fadeIn 0.35s ease forwards;
+}
+
+.animate-fadeOut {
+  animation: fadeOut 0.35s ease forwards;
+  position: absolute;
+  inset: 0;
+}

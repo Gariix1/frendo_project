@@ -6,6 +6,7 @@ type Props = PropsWithChildren<{
   className?: string
 }>
 
+// Smoothly transitions text whenever `watch` (plus locale) changes.
 export default function AnimatedText({ watch, className = '', children }: Props) {
   const { locale } = useI18n()
   const [current, setCurrent] = useState<{ id: string | number; content: ReactNode } | null>(null)
@@ -18,7 +19,7 @@ export default function AnimatedText({ watch, className = '', children }: Props)
   }, [children, derivedKey])
 
   return (
-    <div className={`relative overflow-hidden ${className}`}>
+    <span className={`relative inline-block overflow-hidden ${className}`}>
       {prev && prev.id !== current?.id && (
         <span key={`prev-${String(prev.id)}`} className="block animate-fadeOut text-inherit">
           {prev.content}
@@ -29,6 +30,6 @@ export default function AnimatedText({ watch, className = '', children }: Props)
           {current.content}
         </span>
       )}
-    </div>
+    </span>
   )
 }

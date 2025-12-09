@@ -3,7 +3,9 @@ import os
 import sqlite3
 import threading
 from contextlib import contextmanager
-from typing import Any, Dict, Iterator
+from typing import Iterator
+
+from .app_types import AppState
 
 DATA_DIR = os.path.join(os.path.dirname(__file__))
 JSON_FALLBACK = os.path.join(DATA_DIR, "data.json")
@@ -45,11 +47,11 @@ def _write_kv(conn: sqlite3.Connection, key: str, value: str) -> None:
     conn.commit()
 
 
-def _default_state() -> Dict[str, Any]:
+def _default_state() -> AppState:
     return {"games": {}, "people": []}
 
 
-def _migrate_from_json(conn: sqlite3.Connection) -> Dict[str, Any]:
+def _migrate_from_json(conn: sqlite3.Connection) -> AppState:
     if not os.path.exists(JSON_FALLBACK):
         return _default_state()
     try:
@@ -65,7 +67,7 @@ def _migrate_from_json(conn: sqlite3.Connection) -> Dict[str, Any]:
     return data
 
 
-def _load_from_conn(conn: sqlite3.Connection) -> Dict[str, Any]:
+def _load_from_conn(conn: sqlite3.Connection) -> AppState:
     raw = _read_kv(conn, "state")
     if raw is None:
         data = _migrate_from_json(conn)
@@ -78,10 +80,14 @@ def _load_from_conn(conn: sqlite3.Connection) -> Dict[str, Any]:
         data["games"] = {}
     if "people" not in data:
         data["people"] = []
+    for game in data["games"].values():
+        for participant in game.get("participants", []):
+            if "wish_list" not in participant or participant["wish_list"] is None:
+                participant["wish_list"] = []
     return data
 
 
-def load_state() -> Dict[str, Any]:
+def load_state() -> AppState:
     _ensure_data_dir()
     conn = _connect()
     try:
@@ -92,7 +98,7 @@ def load_state() -> Dict[str, Any]:
 
 
 @contextmanager
-def edit_state() -> Iterator[Dict[str, Any]]:
+def edit_state() -> Iterator[AppState]:
     _ensure_data_dir()
     with _lock:
         conn = _connect()

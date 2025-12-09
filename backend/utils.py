@@ -1,12 +1,12 @@
 import os
 import secrets
 import string
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 
 try:
     import bcrypt  # type: ignore
-except Exception:  # pragma: no cover
-    bcrypt = None
+except ImportError as exc:  # pragma: no cover
+    raise RuntimeError("bcrypt is required; install with 'pip install bcrypt'.") from exc
 
 
 def generate_game_id(length: int = 6) -> str:
@@ -20,18 +20,13 @@ def generate_token(nbytes: int = 16) -> str:
 
 
 def hash_password(password: str) -> str:
-    if bcrypt:
-        salt = bcrypt.gensalt()
-        hashed = bcrypt.hashpw(password.encode("utf-8"), salt)
-        return hashed.decode("utf-8")
-    # Fallback (not recommended for production)
-    import hashlib
-
-    return "sha256:" + hashlib.sha256(password.encode("utf-8")).hexdigest()
+    salt = bcrypt.gensalt()
+    hashed = bcrypt.hashpw(password.encode("utf-8"), salt)
+    return hashed.decode("utf-8")
 
 
 def verify_password(password: str, stored_hash: str) -> bool:
-    if stored_hash.startswith("$2") and bcrypt:
+    if stored_hash.startswith("$2"):
         try:
             return bcrypt.checkpw(password.encode("utf-8"), stored_hash.encode("utf-8"))
         except Exception:
@@ -40,8 +35,7 @@ def verify_password(password: str, stored_hash: str) -> bool:
         import hashlib
 
         return stored_hash == "sha256:" + hashlib.sha256(password.encode("utf-8")).hexdigest()
-    # Plaintext (should not happen)
-    return secrets.compare_digest(password, stored_hash)
+    return False
 
 
 def derangement_assignment(ids: List[str]) -> Dict[str, str]:
@@ -69,6 +63,13 @@ def derangement_assignment(ids: List[str]) -> Dict[str, str]:
     return {a: b for a, b in zip(ids, shuffled)}
 
 
-def get_share_base_url() -> str:
-    return os.getenv("SHARE_BASE_URL", "http://localhost:5173")
-
+def get_share_base_url(origin: Optional[str] = None) -> str:
+    """Return the base URL used to build share links.
+    Priority: explicit env -> provided origin -> localhost fallback.
+    """
+    base = os.getenv("SHARE_BASE_URL")
+    if base:
+        return base
+    if origin:
+        return origin
+    return "http://localhost:5173"

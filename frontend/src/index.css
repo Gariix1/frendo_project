@@ -5,6 +5,8 @@
 :root {
   --glass-bg: rgba(255, 255, 255, 0.08);
   --clay-bg: #050816;
+  --nav-top-offset: 5.5rem;
+  --nav-bottom-offset: 0px;
   /* Palette */
   --c-primary: #7FCE00; /* Yellow Green */
   --c-light: #FFFCD9;   /* Light Yellow */
@@ -91,36 +93,4 @@ body {
     min-height: 260px;
     flex: 0.9;
   }
-}
-
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(6px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-@keyframes fadeOut {
-  from {
-    opacity: 1;
-    transform: translateY(0);
-  }
-  to {
-    opacity: 0;
-    transform: translateY(-6px);
-  }
-}
-
-.animate-fadeIn {
-  animation: fadeIn 0.35s ease forwards;
-}
-
-.animate-fadeOut {
-  animation: fadeOut 0.35s ease forwards;
-  position: absolute;
-  inset: 0;
 }

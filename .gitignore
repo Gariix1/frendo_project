@@ -42,4 +42,11 @@ dist/
 
 # Local data (tokens, assignments)
 backend/data.json
+backend/data.json.bak
+backend/data.sqlite
+backend/data.sqlite.backup*
 
+# Logs / caches
+npm-debug.log*
+yarn-error.log*
+pnp.*
