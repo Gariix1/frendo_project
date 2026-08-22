@@ -196,7 +196,11 @@ class ParticipantPreviewResponse(BaseModel):
 class RevealResponse(BaseModel):
     assigned_to: str
     wish_list: List[WishListItemResponse]
-    ai_session_token: str
+
+
+class AiSessionResponse(BaseModel):
+    session_token: str
+    expires_at: str
 
 
 class GiftSuggestionRequest(BaseModel):
