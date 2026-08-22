@@ -21,6 +21,7 @@ class ParticipantRecord(TypedDict, total=False):
   ai_session_token: Optional[str]
   ai_session_expires_at: Optional[str]
   ai_session_assignment_version: Optional[int]
+  ai_session_requests: int
 
 
 class GameRecord(TypedDict):
