@@ -69,6 +69,26 @@
   "view.alreadyUsed": "Este enlace ya fue usado. Si es necesario, contacta a tu organizador.",
   "errors.linkNotFound": "Enlace no encontrado o inactivo. Contacta a tu organizador.",
 
+  "ai.badge": "IA aplicada",
+  "ai.title": "Asistente inteligente de regalos",
+  "ai.description": "Cuéntame un poco sobre la persona y generaré ideas dentro de tu presupuesto. El sorteo, permisos y reglas siguen siendo lógica tradicional.",
+  "ai.budget": "Presupuesto máximo (USD)",
+  "ai.relationship": "Relación",
+  "ai.relationshipPlaceholder": "amigo, compañero, familiar…",
+  "ai.interests": "Intereses",
+  "ai.interestsPlaceholder": "café, videojuegos, running…",
+  "ai.notes": "Notas opcionales",
+  "ai.notesPlaceholder": "Algo que le guste, algo que quieras evitar…",
+  "ai.generate": "Generar ideas con IA",
+  "ai.generating": "Generando…",
+  "ai.results": "Ideas para {name}",
+  "ai.engineeringNote": "Qué hace la IA y qué no",
+  "ai.invalidBudget": "Ingresa un presupuesto válido mayor o igual a 1 USD.",
+  "ai.notConfigured": "El asistente de IA todavía no está configurado en el servidor.",
+  "ai.sessionExpired": "La sesión segura de IA expiró. Vuelve a iniciar un sorteo para generar una nueva sesión.",
+  "ai.sessionLimit": "Llegaste al límite de consultas de esta sesión de IA.",
+  "ai.failed": "No se pudieron generar sugerencias en este momento.",
+
   "gameLinks.errorLoad": "No se pudieron cargar los enlaces",
   "toasts.assignmentsCreated": "Asignaciones creadas",
   "toasts.assignmentsRedrawn": "Asignaciones rehechas",
@@ -111,8 +131,8 @@
   "admin.stats.totalGames": "Juegos totales",
   "admin.stats.activeGames": "Juegos activos",
   "admin.stats.activePeople": "Personas activas",
-  "admin.stats.totalParticipants": "{count} participantes en los juegos"
-  ,
+  "admin.stats.totalParticipants": "{count} participantes en los juegos",
+
   "sections.shareLinks": "Compartir enlaces",
   "labels.adminPassword": "Contraseña de admin",
   "labels.masterPassword": "Contraseña maestra",
@@ -156,8 +176,8 @@
   "confirm.removeParticipant.cta": "Eliminar",
   "toasts.deactivated": "Enlace desactivado",
   "toasts.reactivated": "Enlace reactivado",
-  "errors.failedChangeStatus": "No se pudo cambiar el estado"
-  ,
+  "errors.failedChangeStatus": "No se pudo cambiar el estado",
+
   "buttons.manage": "Gestionar",
   "manage.title": "Gestionar participante",
   "manage.nameLabel": "Nombre",

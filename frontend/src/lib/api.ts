@@ -22,6 +22,16 @@ type CreateGameOptions = {
   participants?: string[]
 }
 
+type GiftSuggestionOptions = {
+  sessionToken: string
+  budget: number
+  interests?: string[]
+  relationship?: string
+  notes?: string
+  count?: number
+  language?: 'es' | 'en'
+}
+
 async function request(path: string, init?: RequestInit) {
   const res = await fetch(`${API_BASE}${path}`, {
     headers: { 'Content-Type': 'application/json', ...(init?.headers || {}) },
@@ -127,5 +137,20 @@ export const api = {
     request(`/api/people/${personId}/${active ? 'reactivate' : 'deactivate'}`, { method: 'POST', headers: masterPassword ? { 'X-Master-Password': masterPassword } : {} }),
 
   preview: (gameId: string, token: string) => request(`/api/games/${gameId}/${token}`),
+  createAiSession: (gameId: string, token: string) =>
+    request(`/api/games/${gameId}/${token}/ai-session`, { method: 'POST' }),
   reveal: (gameId: string, token: string) => request(`/api/games/${gameId}/${token}/reveal`, { method: 'POST' }),
+  giftSuggestions: (gameId: string, token: string, options: GiftSuggestionOptions) =>
+    request(`/api/games/${gameId}/${token}/gift-suggestions`, {
+      method: 'POST',
+      body: JSON.stringify({
+        session_token: options.sessionToken,
+        budget: options.budget,
+        interests: options.interests || [],
+        relationship: options.relationship || null,
+        notes: options.notes || null,
+        count: options.count || 5,
+        language: options.language || 'es',
+      }),
+    }),
 }

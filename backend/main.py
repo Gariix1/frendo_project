@@ -7,7 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from dotenv import load_dotenv
 
-from .api import admin, games, people
+from .api import admin, ai, games, people
 from .core.middleware import NoStoreCacheMiddleware
 
 
@@ -29,6 +29,7 @@ app.add_middleware(
 app.add_middleware(NoStoreCacheMiddleware)
 
 app.include_router(games.router)
+app.include_router(ai.router)
 app.include_router(people.router)
 app.include_router(admin.router)
 
