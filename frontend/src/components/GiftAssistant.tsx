@@ -13,9 +13,10 @@ type Suggestion = {
 type Props = {
   gameId: string
   token: string
+  sessionToken: string
 }
 
-export default function GiftAssistant({ gameId, token }: Props) {
+export default function GiftAssistant({ gameId, token, sessionToken }: Props) {
   const { locale, t } = useI18n()
   const [budget, setBudget] = useState('25')
   const [interests, setInterests] = useState('')
@@ -39,6 +40,7 @@ export default function GiftAssistant({ gameId, token }: Props) {
     setError(null)
     try {
       const result = await api.giftSuggestions(gameId, token, {
+        sessionToken,
         budget: numericBudget,
         interests: interests.split(',').map((item) => item.trim()).filter(Boolean),
         relationship: relationship.trim() || undefined,
@@ -52,6 +54,10 @@ export default function GiftAssistant({ gameId, token }: Props) {
     } catch (err: any) {
       if (err?.code === 'ai_not_configured') {
         setError(t('ai.notConfigured'))
+      } else if (err?.code === 'ai_session_expired' || err?.code === 'ai_session_invalid') {
+        setError(t('ai.sessionExpired'))
+      } else if (err?.code === 'ai_session_limit') {
+        setError(t('ai.sessionLimit'))
       } else {
         setError(t('ai.failed'))
       }
