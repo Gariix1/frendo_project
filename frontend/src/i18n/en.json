@@ -85,6 +85,8 @@
   "ai.engineeringNote": "What AI does and does not do",
   "ai.invalidBudget": "Enter a valid budget of at least 1 USD.",
   "ai.notConfigured": "The AI assistant is not configured on the server yet.",
+  "ai.sessionExpired": "The secure AI session expired. Start a new draw to create another session.",
+  "ai.sessionLimit": "You reached the AI request limit for this session.",
   "ai.failed": "Suggestions could not be generated right now.",
 
   "gameLinks.errorLoad": "Failed to load links",
