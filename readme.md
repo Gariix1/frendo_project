@@ -1,196 +1,167 @@
-# Secret Friend Web App (Pikkado-style)
+# Frendo — Secret Friend Web App
 
-A mobile-first web app to organize Secret Santa/Secret Friend games without requiring accounts. Each participant receives a unique link to reveal their assigned person.
+Frendo is a mobile-first full-stack application for organizing Secret Friend / Secret Santa games without requiring participant accounts. An organizer creates a game, performs the draw and shares a unique link with each participant.
 
----
+The project is also an applied-AI experiment: gift recommendations use a generative model, while the draw, permissions, budget validation and persistence remain deterministic.
 
-## Overview
+## Highlights
 
-Organizer creates a game, adds participants, and triggers a random draw that prevents self-assignment. Frontend emphasizes a clean mobile experience (glassmorphism). Backend uses FastAPI for a lightweight, fast API.
+- Create and manage Secret Friend games.
+- Global people directory for reusable participants.
+- Random draw that prevents self-assignment.
+- Unique participant tokens and one-time reveal flow.
+- Admin controls to redraw, rename participants and activate/deactivate links.
+- Wish lists per participant.
+- One-click WhatsApp sharing and QR flows.
+- SQLite persistence with migration from the original JSON store.
+- Unit tests for services, validators and AI-output validation.
+- Bilingual UI (Spanish / English).
 
----
+## Applied AI: Smart Gift Assistant
 
-## Agreed Scope and Rules
+After revealing a Secret Friend, the participant can provide:
 
-- Admin panel protected by a simple password.
-- Admin can edit participants and redo the draw.
-- Links never expire unless manually deactivated/reactivated.
-- Minimum participants: 3. No duplicate names within a game.
-- Reveal flow: confirmation step before revealing. Reopening a used link shows a friendly message.
-- Persistence (initial): local JSON file on the organizer’s machine; the server is the source of truth. Client may cache, but "viewed" is stored server-side.
-- Game lifetime: indefinite.
-- Frontend shows shareable links and one-click WhatsApp sharing.
+- maximum budget,
+- interests,
+- relationship/context,
+- optional notes.
 
----
+The backend combines that input with the recipient's wishlist and requests gift ideas from the OpenAI Responses API. Model output is treated as untrusted data: it is parsed, deduplicated and validated before reaching the frontend.
 
-## System Flow
+### AI vs deterministic logic
 
-1. Admin creates a game (title, password, names).
-2. System generates tokens and links for each participant.
-3. Admin shares links (copy/WhatsApp).
-4. Participant opens link → confirmation screen → reveal.
-5. Server marks token as viewed; reopening shows a friendly message.
+**AI handles**
+- interpreting preferences,
+- generating gift alternatives,
+- explaining why each suggestion may fit.
 
----
+**Traditional logic handles**
+- the draw and assignment rules,
+- authentication/token access,
+- game and link state,
+- budget enforcement,
+- persistence,
+- permissions and business rules.
 
-## API Specification (FastAPI)
+Suggestions whose estimated price exceeds the user's budget are discarded by backend logic. The model cannot modify the game, participant list, assignments or wish lists.
 
-Authentication for admin endpoints: send `X-Admin-Password: <password>` header. Participant endpoints use the unique token within the URL.
-Global directory endpoints (optional) use `X-Master-Password: <password>` if `MASTER_ADMIN_PASSWORD` is set in env.
+See [`docs/AI_GIFT_ASSISTANT.md`](docs/AI_GIFT_ASSISTANT.md) for the design rationale and data flow.
 
-- Create game
-  - POST `/api/games`
-  - Body: `{ "title": "Holiday 2025", "admin_password": "secret123", "participants": ["Ana","Luis"], "person_ids": ["u10","u11"] }`
-    - You may mix directory ids (`person_ids`) with ad-hoc names (`participants`). The combined list must respect the minimum participant rule.
-  - Responses:
-    - 201 `{ "game_id": "ABC123", "share_base_url": "https://app.example.com" }`
-    - 400 on invalid input (duplicates, < 3 participants)
+## Tech Stack
 
-- Get game status [admin]
-  - GET `/api/games/{id}` with `X-Admin-Password`
-  - 200 `{ game_id, title, created_at, participants: [{ id, name, token, viewed, active }], any_revealed }`
-  - 401 invalid password, 404 not found
+### Frontend
+- React
+- TypeScript
+- Vite
+- Tailwind CSS
 
-- List shareable links [admin]
-  - GET `/api/games/{id}/links` with `X-Admin-Password`
-  - 200 `[ { name, link } ]`
+### Backend
+- Python 3.11+
+- FastAPI
+- Pydantic
+- SQLite
+- bcrypt
+- OpenAI Responses API
 
-- Add participants [admin]
-  - POST `/api/games/{id}/participants` with `X-Admin-Password`
-  - Body: `{ "participants": ["Julia","Marco"] }`
-  - 200 `{ added: [{ id, name }] }` or 400 on duplicates
+## Architecture
 
-- Remove participant [admin]
-  - DELETE `/api/games/{id}/participants/{participant_id}` with `X-Admin-Password`
-  - 204 on success, 404 if not found
+```text
+Frontend (React + TypeScript)
+          |
+          v
+      REST API
+          |
+          v
+FastAPI routers
+          |
+          v
+Business services
+     |          |
+     v          v
+Repositories   AI service
+     |          |
+     v          v
+SQLite      OpenAI API
+```
 
-- Redo draw [admin]
-  - POST `/api/games/{id}/draw` with `X-Admin-Password`
-  - Body (optional): `{ "force": false }`
-  - 200 `{ assignment_version }`; 409 if any participant already revealed and `force=false`
+Backend responsibilities are separated into routers, services, repositories, validation and storage layers.
 
-- Deactivate/reactivate link [admin]
-  - POST `/api/games/{id}/{token}/deactivate` with `X-Admin-Password`
-  - POST `/api/games/{id}/{token}/reactivate` with `X-Admin-Password`
-  - 200 on success; 404 if token not found
+## Main API Flows
 
-- Participant preview (non-consuming)
-  - GET `/api/games/{id}/{token}`
-  - 200 `{ name, viewed, can_reveal: true|false }` or 404 if not found/inactive
+### Games
+- `POST /api/games`
+- `GET /api/games/{game_id}`
+- `POST /api/games/{game_id}/draw`
+- `GET /api/games/{game_id}/links`
 
-- Reveal (consuming)
-  - POST `/api/games/{id}/{token}/reveal`
-  - 200 first time `{ assigned_to, wish_list }`; 409 on subsequent calls with un mensaje amistoso
+### Participant
+- `GET /api/games/{game_id}/{token}`
+- `POST /api/games/{game_id}/{token}/reveal`
+- `GET /api/games/{game_id}/{token}/wishlist`
+- `POST /api/games/{game_id}/{token}/wishlist`
 
-- Wish list (admin)
-  - GET `/api/games/{id}/participants/{participantId}/wishlist` (header admin) → `{ items: [...] }`
-  - POST same path with body `{ title, price?, url? }` → agrega ítem
-  - DELETE `/api/games/{id}/participants/{participantId}/wishlist/{itemId}` → elimina ítem
+### Applied AI
+- `POST /api/games/{game_id}/{token}/gift-suggestions`
 
-- Wish list (participante, usando su token)
-  - GET `/api/games/{id}/{token}/wishlist`
-  - POST `/api/games/{id}/{token}/wishlist` con `{ title, price?, url? }`
-  - DELETE `/api/games/{id}/{token}/wishlist/{itemId}`
-
-Common status codes: 400 validation, 401 admin auth error, 404 not found, 409 conflict.
-
-Global people directory (optional)
-- GET `/api/people` → list global participants `{ id, name, active }`
-- POST `/api/people` [master] body `{ names: ["Ana","Luis"] }` → add/activate people
-- PATCH `/api/people/{id}` [master] `{ name }` → rename
-- POST `/api/people/{id}/deactivate|reactivate` [master]
-
----
-
-## Data Model (SQLite persistence)
-
-The backend now uses a simple SQLite file as the single source of truth on the organizer's machine. All devices read/write via the backend API; clients must not cache state.
-
-- Location: `backend/data.sqlite` (created on first run)
-- A lightweight KV store keeps the full state; existing `backend/data.json` is auto-migrated on first run and kept as a backup (`data.json.bak`).
-
-Example in-memory structure (serialized into the KV store):
+Example request:
 
 ```json
 {
-  "game_id": "ABC123",
-  "title": "Holiday 2025",
-  "admin_password_hash": "<bcrypt>",
-  "created_at": "2025-11-11T10:00:00Z",
-  "updated_at": "2025-11-11T10:00:00Z",
-  "assignment_version": 1,
-  "any_revealed": false,
-  "participants": [
-    { "id": "p1", "name": "Ana", "token": "1f92f8a9c4f0a1b2", "assigned_to_participant_id": "p3", "viewed": false, "viewed_at": null, "active": true },
-    { "id": "p2", "name": "Luis", "token": "a8c3e9d4e1c2f3b4", "assigned_to_participant_id": "p1", "viewed": true,  "viewed_at": "2025-11-11T10:10:00Z", "active": true },
-    { "id": "p3", "name": "Carla", "token": "b9f1c2e5d6a7b8c9", "assigned_to_participant_id": "p2", "viewed": false, "viewed_at": null, "active": true }
-  ]
+  "budget": 30,
+  "interests": ["coffee", "running"],
+  "relationship": "coworker",
+  "notes": "prefers practical gifts",
+  "count": 5,
+  "language": "en"
 }
 ```
 
-Rules:
-- Names must be unique per game; min size is 3.
-- Draw prevents self-assignment; redraw blocked after reveals unless `force=true`.
-- Token length ≥ 16, random; store `viewed` only on reveal.
+## Local Setup
 
----
+### Backend
 
-## Frontend Notes
+```bash
+python -m venv .venv
+source .venv/bin/activate
+pip install -r backend/requirements.txt
+uvicorn backend.main:app --reload
+```
 
-- Tech: React + Vite + TailwindCSS; glassmorphism (translucent background, blur, soft shadows).
-- Admin: create game, copy/share links, manage participants, redo draw, toggle links.
-- Participant: confirmation screen before reveal; reopen shows a friendly message.
-- WhatsApp share: prefilled message with the unique URL.
+Configure environment variables using `.env.example`:
 
----
+```env
+SHARE_BASE_URL=http://localhost:5173
+FRONTEND_ORIGINS=http://localhost:5173
+MASTER_ADMIN_PASSWORD=
+OPENAI_API_KEY=
+OPENAI_MODEL=gpt-5.6-luna
+```
 
-## Setup & Run
+Keep `OPENAI_API_KEY` server-side. It must never be exposed in Vite/frontend environment variables.
 
-Prerequisites:
-- Python 3.11+
-- Node.js 18+
+### Frontend
 
-Backend (FastAPI):
-- Install: `pip install fastapi uvicorn[standard] pydantic bcrypt python-multipart`
-- Env: `SHARE_BASE_URL` (e.g., `http://localhost:5173`)
-- Dev run (local only): `uvicorn backend.main:app --reload`
-- Dev run (expose to LAN): `uvicorn backend.main:app --host 0.0.0.0 --port 8000`
-- Data file: `backend/data.json` (created on first run)
+```bash
+cd frontend
+npm install
+npm run dev
+```
 
-Frontend (React + Vite + Tailwind):
-- Install deps: `npm install`
-- Env: set `VITE_API_BASE` to the reachable backend URL (e.g., `http://localhost:8000` or `http://<tu-ip-lan>:8000` in `.env`)
-- Dev run: `npm run dev` (Vite muestra URLs localhost y de red; comparte la de red si otros dispositivos deben acceder)
+Set `VITE_API_BASE` when the API is hosted on a different origin.
 
-Frontend (React + Vite + Tailwind):
-- Install deps: `npm install`
-- Dev run: `npm run dev`
+## Tests
 
-Security notes:
-- Configure CORS for your frontend origin.
-- Prefer `Referrer-Policy: no-referrer` when serving participant links.
+```bash
+python -m unittest \
+  backend.tests.test_services \
+  backend.tests.test_validators \
+  backend.tests.test_ai_gift_service
+```
 
----
+## Engineering Notes
 
-## Roadmap (next)
-### Arquitectura Backend
-- **Routers (`backend/api`)**: exponen los endpoints FastAPI y sólo delegan en los servicios.
-- **Servicios (`backend/services`)**: contienen la lógica de negocio y dependen de validadores compartidos.
-- **Repositorios (`backend/repositories`)**: abstraen el acceso al estado (SQLite/JSON) a través de `transact()` y lecturas tipadas.
-- **Validaciones (`backend/models.py`, `backend/services/validators.py`)**: los DTO Pydantic limpian la entrada y los helpers aplican reglas adicionales (duplicados, conteos mínimos, etc.).
-- **Storage (`backend/storage.py`)**: persistencia KV sobre SQLite con migración desde JSON.
-
-### Pruebas
-- Ejecuta `python3 -m unittest backend.tests.test_services backend.tests.test_validators` para correr los tests unitarios.
-- Los tests usan un directorio temporal para no tocar `backend/data.sqlite` y stubs para FastAPI/Pydantic si no están instalados.
-
-- Implement backend endpoints and local JSON persistence.
-- Scaffold frontend pages: CreateGame, GameLinks, ViewResult.
-- Add WhatsApp share and copy-to-clipboard.
-- Add confirm-before-reveal flow and friendly re-open state.
-
----
+Frendo intentionally avoids using AI for deterministic business logic. The AI integration is isolated behind a service boundary, so the core Secret Friend application remains usable even when the model provider is unavailable or not configured.
 
 ## License
 
-MIT License
+MIT
