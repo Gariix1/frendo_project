@@ -30,3 +30,5 @@ class ErrorCode(str, Enum):
   WISHLIST_ITEM_NOT_FOUND = "wishlist_item_not_found"
   AI_NOT_CONFIGURED = "ai_not_configured"
   AI_GENERATION_FAILED = "ai_generation_failed"
+  AI_SESSION_INVALID = "ai_session_invalid"
+  AI_SESSION_EXPIRED = "ai_session_expired"
