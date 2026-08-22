@@ -28,3 +28,5 @@ class ErrorCode(str, Enum):
   INVALID_REQUEST_BODY = "invalid_request_body"
   INVALID_PEOPLE_REQUEST = "invalid_people_request"
   WISHLIST_ITEM_NOT_FOUND = "wishlist_item_not_found"
+  AI_NOT_CONFIGURED = "ai_not_configured"
+  AI_GENERATION_FAILED = "ai_generation_failed"
