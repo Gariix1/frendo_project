@@ -69,6 +69,24 @@
   "view.alreadyUsed": "This link was already used. If needed, contact your organizer.",
   "errors.linkNotFound": "Link not found or inactive. Please contact your organizer.",
 
+  "ai.badge": "Applied AI",
+  "ai.title": "Smart gift assistant",
+  "ai.description": "Tell me a little about the person and I will generate ideas within your budget. The draw, permissions, and business rules remain deterministic.",
+  "ai.budget": "Maximum budget (USD)",
+  "ai.relationship": "Relationship",
+  "ai.relationshipPlaceholder": "friend, coworker, family…",
+  "ai.interests": "Interests",
+  "ai.interestsPlaceholder": "coffee, gaming, running…",
+  "ai.notes": "Optional notes",
+  "ai.notesPlaceholder": "Something they like, something to avoid…",
+  "ai.generate": "Generate ideas with AI",
+  "ai.generating": "Generating…",
+  "ai.results": "Ideas for {name}",
+  "ai.engineeringNote": "What AI does and does not do",
+  "ai.invalidBudget": "Enter a valid budget of at least 1 USD.",
+  "ai.notConfigured": "The AI assistant is not configured on the server yet.",
+  "ai.failed": "Suggestions could not be generated right now.",
+
   "gameLinks.errorLoad": "Failed to load links",
   "toasts.assignmentsCreated": "Assignments created",
   "toasts.assignmentsRedrawn": "Assignments redrawn",
@@ -112,7 +130,7 @@
   "admin.stats.activeGames": "Active games",
   "admin.stats.activePeople": "Active people",
   "admin.stats.totalParticipants": "{count} participants across games",
-  
+
   "sections.shareLinks": "Share Links",
   "labels.adminPassword": "Admin Password",
   "labels.masterPassword": "Master password",
@@ -156,8 +174,8 @@
   "confirm.removeParticipant.cta": "Remove",
   "toasts.deactivated": "Link deactivated",
   "toasts.reactivated": "Link reactivated",
-  "errors.failedChangeStatus": "Failed to change status"
-  ,
+  "errors.failedChangeStatus": "Failed to change status",
+
   "buttons.manage": "Manage",
   "manage.title": "Manage participant",
   "manage.nameLabel": "Name",
