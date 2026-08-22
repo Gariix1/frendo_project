@@ -1,7 +1,16 @@
+import os
+import tempfile
 import unittest
 
-from backend.models import GiftSuggestionRequest
-from backend.services.ai_gift_service import _extract_json_array, _sanitize_suggestions
+from backend import storage
+from backend.models import CreateGameRequest, DrawRequest, GiftSuggestionRequest
+from backend.services import games_service
+from backend.services.ai_gift_service import (
+  _authorize_context,
+  _extract_json_array,
+  _sanitize_suggestions,
+  create_ai_session,
+)
 
 
 class GiftAssistantParsingTests(unittest.TestCase):
@@ -32,6 +41,49 @@ class GiftAssistantParsingTests(unittest.TestCase):
 
     self.assertEqual([item.title for item in result], ["Coffee kit", "Book"])
     self.assertTrue(all((item.estimated_price or 0) <= 30 for item in result))
+
+
+class GiftAssistantSessionTests(unittest.TestCase):
+  def setUp(self):
+    self.temp_dir = tempfile.TemporaryDirectory()
+    storage.DATA_DIR = self.temp_dir.name
+    storage.JSON_FALLBACK = os.path.join(self.temp_dir.name, "data.json")
+    storage.DB_PATH = os.path.join(self.temp_dir.name, "data.sqlite")
+    os.makedirs(storage.DATA_DIR, exist_ok=True)
+    with storage.edit_state() as state:
+      state["games"] = {}
+      state["people"] = []
+
+    result = games_service.create_game(CreateGameRequest(
+      title="AI demo",
+      admin_password="admin123",
+      participants=["Ana", "Luis", "Eva"],
+      person_ids=[],
+    ))
+    self.game_id = result["game_id"]
+    games_service.draw_assignments(self.game_id, DrawRequest(force=False), "admin123")
+    status = games_service.get_game_status(self.game_id, "admin123")
+    self.token = status.participants[0].token
+
+  def tearDown(self):
+    self.temp_dir.cleanup()
+
+  def test_session_created_before_reveal_authorizes_after_reveal(self):
+    session = create_ai_session(self.game_id, self.token)
+    self.assertTrue(session.session_token)
+    games_service.reveal_assignment(self.game_id, self.token)
+
+    context = _authorize_context(self.game_id, self.token, session.session_token)
+    self.assertTrue(context["recipient"]["name"])
+
+  def test_old_session_is_invalid_after_redraw(self):
+    session = create_ai_session(self.game_id, self.token)
+    games_service.reveal_assignment(self.game_id, self.token)
+    games_service.draw_assignments(self.game_id, DrawRequest(force=True), "admin123")
+    games_service.reveal_assignment(self.game_id, self.token)
+
+    with self.assertRaises(Exception):
+      _authorize_context(self.game_id, self.token, session.session_token)
 
 
 if __name__ == "__main__":
