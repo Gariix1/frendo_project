@@ -14,6 +14,7 @@ export default function ViewResult() {
   const [viewed, setViewed] = useState(false)
   const [canReveal, setCanReveal] = useState(false)
   const [assignedTo, setAssignedTo] = useState<string | null>(null)
+  const [aiSessionToken, setAiSessionToken] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [confirmReveal, setConfirmReveal] = useState(false)
   const { t } = useI18n()
@@ -37,10 +38,20 @@ export default function ViewResult() {
   const doReveal = async () => {
     if (!gameId || !token) return
     setError(null)
+
+    let pendingAiSession: string | null = null
+    try {
+      const aiSession = await api.createAiSession(gameId, token)
+      pendingAiSession = aiSession?.session_token || null
+    } catch {
+      // AI is optional: a session failure must never block the core reveal flow.
+    }
+
     try {
       const res = await api.reveal(gameId, token)
       setAssignedTo(res.assigned_to)
       setViewed(true)
+      setAiSessionToken(pendingAiSession)
     } catch (err: any) {
       setError(t('view.alreadyUsed'))
     }
@@ -64,7 +75,9 @@ export default function ViewResult() {
             {assignedTo && (
               <div className="mt-2">
                 <p className="text-lg">{t('view.result', { name: assignedTo })}</p>
-                {gameId && token && <GiftAssistant gameId={gameId} token={token} />}
+                {gameId && token && aiSessionToken && (
+                  <GiftAssistant gameId={gameId} token={token} sessionToken={aiSessionToken} />
+                )}
               </div>
             )}
             {!assignedTo && viewed && (
