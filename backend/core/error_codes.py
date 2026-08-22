@@ -32,3 +32,4 @@ class ErrorCode(str, Enum):
   AI_GENERATION_FAILED = "ai_generation_failed"
   AI_SESSION_INVALID = "ai_session_invalid"
   AI_SESSION_EXPIRED = "ai_session_expired"
+  AI_SESSION_LIMIT = "ai_session_limit"
