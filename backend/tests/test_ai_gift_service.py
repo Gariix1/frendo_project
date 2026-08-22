@@ -15,6 +15,7 @@ class GiftAssistantParsingTests(unittest.TestCase):
 
   def test_sanitize_deduplicates_and_enforces_budget(self):
     payload = GiftSuggestionRequest(
+      session_token="a" * 24,
       budget=30,
       interests=[],
       relationship=None,
