@@ -196,3 +196,51 @@ class ParticipantPreviewResponse(BaseModel):
 class RevealResponse(BaseModel):
     assigned_to: str
     wish_list: List[WishListItemResponse]
+
+
+class GiftSuggestionRequest(BaseModel):
+    budget: float = Field(ge=1, le=10000)
+    interests: List[str] = Field(default_factory=list, max_items=8)
+    relationship: Optional[str] = Field(default=None, max_length=80)
+    notes: Optional[str] = Field(default=None, max_length=500)
+    count: int = Field(default=5, ge=1, le=5)
+    language: str = Field(default="es", max_length=2)
+
+    @validator("interests", pre=True, always=True)
+    def normalize_interests(cls, v: Optional[List[str]]) -> List[str]:
+        if not v:
+            return []
+        cleaned: List[str] = []
+        seen = set()
+        for interest in v:
+            value = str(interest).strip()[:80]
+            key = value.lower()
+            if value and key not in seen:
+                cleaned.append(value)
+                seen.add(key)
+        return cleaned[:8]
+
+    @validator("relationship", "notes", pre=True)
+    def normalize_optional_text(cls, v: Optional[str]) -> Optional[str]:
+        if v is None:
+            return None
+        value = str(v).strip()
+        return value or None
+
+    @validator("language")
+    def normalize_language(cls, v: str) -> str:
+        value = v.lower().strip()
+        return value if value in {"es", "en"} else "es"
+
+
+class GiftSuggestion(BaseModel):
+    title: str
+    reason: str
+    estimated_price: Optional[float] = None
+
+
+class GiftSuggestionResponse(BaseModel):
+    recipient: str
+    model: str
+    suggestions: List[GiftSuggestion]
+    deterministic_rules: List[str]
