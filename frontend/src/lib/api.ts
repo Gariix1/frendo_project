@@ -22,6 +22,15 @@ type CreateGameOptions = {
   participants?: string[]
 }
 
+type GiftSuggestionOptions = {
+  budget: number
+  interests?: string[]
+  relationship?: string
+  notes?: string
+  count?: number
+  language?: 'es' | 'en'
+}
+
 async function request(path: string, init?: RequestInit) {
   const res = await fetch(`${API_BASE}${path}`, {
     headers: { 'Content-Type': 'application/json', ...(init?.headers || {}) },
@@ -128,4 +137,16 @@ export const api = {
 
   preview: (gameId: string, token: string) => request(`/api/games/${gameId}/${token}`),
   reveal: (gameId: string, token: string) => request(`/api/games/${gameId}/${token}/reveal`, { method: 'POST' }),
+  giftSuggestions: (gameId: string, token: string, options: GiftSuggestionOptions) =>
+    request(`/api/games/${gameId}/${token}/gift-suggestions`, {
+      method: 'POST',
+      body: JSON.stringify({
+        budget: options.budget,
+        interests: options.interests || [],
+        relationship: options.relationship || null,
+        notes: options.notes || null,
+        count: options.count || 5,
+        language: options.language || 'es',
+      }),
+    }),
 }
