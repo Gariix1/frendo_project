@@ -1,14 +1,20 @@
 import json
 import os
+import secrets
 from typing import Any, Dict, List, Optional
 
+from ..app_types import AppState
 from ..core.error_codes import ErrorCode
 from ..core.errors import app_error
-from ..models import GiftSuggestion, GiftSuggestionRequest, GiftSuggestionResponse
+from ..core.time import future_iso, is_future_iso, now_iso
+from ..models import AiSessionResponse, GiftSuggestion, GiftSuggestionRequest, GiftSuggestionResponse
 from ..repositories.games_repository import GameRepository
+from ..utils import generate_token
 
 
 DEFAULT_MODEL = "gpt-5.6-luna"
+SESSION_MINUTES = 15
+MAX_REQUESTS_PER_SESSION = 5
 DETERMINISTIC_RULES = [
   "El sorteo, permisos y acceso al enlace se validan con lógica tradicional.",
   "El presupuesto se valida en backend y se descartan sugerencias que lo superen.",
@@ -24,33 +30,76 @@ def _find_participant_by_id(game: Dict[str, Any], participant_id: str) -> Option
   return next((p for p in game.get("participants", []) if p.get("id") == participant_id), None)
 
 
-def _build_context(game_id: str, token: str) -> Dict[str, Any]:
+def create_ai_session(game_id: str, token: str) -> AiSessionResponse:
   repository = GameRepository()
-  game = repository.get_game(game_id)
-  if not game:
-    raise app_error(404, ErrorCode.GAME_NOT_FOUND, "Game not found")
-  if not game.get("active", True):
-    raise app_error(404, ErrorCode.GAME_INACTIVE, "Game is inactive")
 
-  participant = _find_participant(game, token)
-  if not participant or not participant.get("active", True):
-    raise app_error(404, ErrorCode.LINK_NOT_FOUND, "Link not found or inactive")
-  if not participant.get("viewed"):
-    raise app_error(409, ErrorCode.ASSIGNMENT_NOT_READY, "Reveal your assignment before requesting gift ideas")
+  def _mutate(state: AppState) -> AiSessionResponse:
+    game = state.get("games", {}).get(game_id)
+    if not game or not game.get("active", True):
+      raise app_error(404, ErrorCode.GAME_NOT_FOUND, "Game not found or inactive")
 
-  assigned_id = participant.get("assigned_to_participant_id")
-  if not assigned_id:
-    raise app_error(409, ErrorCode.INVALID_ASSIGNMENT_STATE, "Assignment is not available")
+    participant = _find_participant(game, token)
+    if not participant or not participant.get("active", True):
+      raise app_error(404, ErrorCode.LINK_NOT_FOUND, "Link not found or inactive")
+    if participant.get("viewed"):
+      raise app_error(409, ErrorCode.ASSIGNMENT_ALREADY_VIEWED, "AI session must be created before reveal")
+    if not participant.get("assigned_to_participant_id"):
+      raise app_error(409, ErrorCode.ASSIGNMENT_NOT_READY, "Draw not performed yet")
 
-  recipient = _find_participant_by_id(game, assigned_id)
-  if not recipient:
-    raise app_error(409, ErrorCode.INVALID_ASSIGNMENT_STATE, "Assigned participant was not found")
+    session_token = generate_token(24)
+    expires_at = future_iso(SESSION_MINUTES)
+    participant["ai_session_token"] = session_token
+    participant["ai_session_expires_at"] = expires_at
+    participant["ai_session_assignment_version"] = int(game.get("assignment_version", 0))
+    participant["ai_session_requests"] = 0
+    game["updated_at"] = now_iso()
+    return AiSessionResponse(session_token=session_token, expires_at=expires_at)
 
-  return {
-    "requester": participant,
-    "recipient": recipient,
-    "game": game,
-  }
+  return repository.transact(_mutate)
+
+
+def _authorize_context(game_id: str, token: str, session_token: str) -> Dict[str, Any]:
+  repository = GameRepository()
+
+  def _mutate(state: AppState) -> Dict[str, Any]:
+    game = state.get("games", {}).get(game_id)
+    if not game or not game.get("active", True):
+      raise app_error(404, ErrorCode.GAME_NOT_FOUND, "Game not found or inactive")
+
+    participant = _find_participant(game, token)
+    if not participant or not participant.get("active", True):
+      raise app_error(404, ErrorCode.LINK_NOT_FOUND, "Link not found or inactive")
+    if not participant.get("viewed"):
+      raise app_error(409, ErrorCode.ASSIGNMENT_NOT_READY, "Reveal your assignment before requesting gift ideas")
+
+    stored_session = str(participant.get("ai_session_token") or "")
+    if not stored_session or not secrets.compare_digest(stored_session, session_token):
+      raise app_error(401, ErrorCode.AI_SESSION_INVALID, "Invalid AI session")
+    if not is_future_iso(participant.get("ai_session_expires_at")):
+      raise app_error(401, ErrorCode.AI_SESSION_EXPIRED, "AI session expired")
+    if int(participant.get("ai_session_assignment_version") or -1) != int(game.get("assignment_version", 0)):
+      raise app_error(401, ErrorCode.AI_SESSION_INVALID, "AI session belongs to an older draw")
+
+    request_count = int(participant.get("ai_session_requests", 0))
+    if request_count >= MAX_REQUESTS_PER_SESSION:
+      raise app_error(429, ErrorCode.AI_SESSION_LIMIT, "AI session request limit reached")
+
+    assigned_id = participant.get("assigned_to_participant_id")
+    if not assigned_id:
+      raise app_error(409, ErrorCode.INVALID_ASSIGNMENT_STATE, "Assignment is not available")
+    recipient = _find_participant_by_id(game, assigned_id)
+    if not recipient:
+      raise app_error(409, ErrorCode.INVALID_ASSIGNMENT_STATE, "Assigned participant was not found")
+
+    participant["ai_session_requests"] = request_count + 1
+    game["updated_at"] = now_iso()
+
+    return {
+      "recipient": dict(recipient),
+      "game_id": game_id,
+    }
+
+  return repository.transact(_mutate)
 
 
 def _wishlist_summary(recipient: Dict[str, Any]) -> List[Dict[str, Any]]:
@@ -65,14 +114,12 @@ def _wishlist_summary(recipient: Dict[str, Any]) -> List[Dict[str, Any]]:
 
 def _prompt(payload: GiftSuggestionRequest, recipient: Dict[str, Any]) -> str:
   language = "Spanish" if payload.language == "es" else "English"
-  wishlist = _wishlist_summary(recipient)
   context = {
-    "recipient_name": recipient.get("name"),
     "budget_usd": payload.budget,
     "relationship": payload.relationship,
     "interests": payload.interests,
     "notes": payload.notes,
-    "wishlist": wishlist,
+    "wishlist": _wishlist_summary(recipient),
     "requested_count": payload.count,
   }
 
@@ -145,9 +192,8 @@ def _sanitize_suggestions(items: List[Any], payload: GiftSuggestionRequest) -> L
       except (TypeError, ValueError):
         estimated_price = None
 
-    if estimated_price is not None:
-      if estimated_price < 0 or estimated_price > payload.budget:
-        continue
+    if estimated_price is not None and (estimated_price < 0 or estimated_price > payload.budget):
+      continue
 
     suggestions.append(GiftSuggestion(
       title=title,
@@ -168,7 +214,7 @@ def generate_gift_suggestions(game_id: str, token: str, payload: GiftSuggestionR
   if not api_key:
     raise app_error(503, ErrorCode.AI_NOT_CONFIGURED, "AI assistant is not configured")
 
-  context = _build_context(game_id, token)
+  context = _authorize_context(game_id, token, payload.session_token)
   recipient = context["recipient"]
 
   try:
@@ -179,8 +225,7 @@ def generate_gift_suggestions(game_id: str, token: str, payload: GiftSuggestionR
       model=model,
       input=_prompt(payload, recipient),
     )
-    raw = response.output_text
-    parsed = _extract_json_array(raw)
+    parsed = _extract_json_array(response.output_text)
     suggestions = _sanitize_suggestions(parsed, payload)
   except Exception as exc:
     raise app_error(502, ErrorCode.AI_GENERATION_FAILED, f"AI generation failed: {type(exc).__name__}")
