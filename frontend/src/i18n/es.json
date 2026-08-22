@@ -85,6 +85,8 @@
   "ai.engineeringNote": "Qué hace la IA y qué no",
   "ai.invalidBudget": "Ingresa un presupuesto válido mayor o igual a 1 USD.",
   "ai.notConfigured": "El asistente de IA todavía no está configurado en el servidor.",
+  "ai.sessionExpired": "La sesión segura de IA expiró. Vuelve a iniciar un sorteo para generar una nueva sesión.",
+  "ai.sessionLimit": "Llegaste al límite de consultas de esta sesión de IA.",
   "ai.failed": "No se pudieron generar sugerencias en este momento.",
 
   "gameLinks.errorLoad": "No se pudieron cargar los enlaces",
