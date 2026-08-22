@@ -23,6 +23,7 @@ type CreateGameOptions = {
 }
 
 type GiftSuggestionOptions = {
+  sessionToken: string
   budget: number
   interests?: string[]
   relationship?: string
@@ -136,11 +137,14 @@ export const api = {
     request(`/api/people/${personId}/${active ? 'reactivate' : 'deactivate'}`, { method: 'POST', headers: masterPassword ? { 'X-Master-Password': masterPassword } : {} }),
 
   preview: (gameId: string, token: string) => request(`/api/games/${gameId}/${token}`),
+  createAiSession: (gameId: string, token: string) =>
+    request(`/api/games/${gameId}/${token}/ai-session`, { method: 'POST' }),
   reveal: (gameId: string, token: string) => request(`/api/games/${gameId}/${token}/reveal`, { method: 'POST' }),
   giftSuggestions: (gameId: string, token: string, options: GiftSuggestionOptions) =>
     request(`/api/games/${gameId}/${token}/gift-suggestions`, {
       method: 'POST',
       body: JSON.stringify({
+        session_token: options.sessionToken,
         budget: options.budget,
         interests: options.interests || [],
         relationship: options.relationship || null,
