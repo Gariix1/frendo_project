@@ -196,15 +196,24 @@ class ParticipantPreviewResponse(BaseModel):
 class RevealResponse(BaseModel):
     assigned_to: str
     wish_list: List[WishListItemResponse]
+    ai_session_token: str
 
 
 class GiftSuggestionRequest(BaseModel):
+    session_token: str = Field(min_length=16, max_length=128)
     budget: float = Field(ge=1, le=10000)
     interests: List[str] = Field(default_factory=list, max_items=8)
     relationship: Optional[str] = Field(default=None, max_length=80)
     notes: Optional[str] = Field(default=None, max_length=500)
     count: int = Field(default=5, ge=1, le=5)
     language: str = Field(default="es", max_length=2)
+
+    @validator("session_token")
+    def normalize_session_token(cls, v: str) -> str:
+        value = v.strip()
+        if not value:
+            raise ValueError("session_token is required")
+        return value
 
     @validator("interests", pre=True, always=True)
     def normalize_interests(cls, v: Optional[List[str]]) -> List[str]:
