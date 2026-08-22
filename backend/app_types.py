@@ -20,6 +20,7 @@ class ParticipantRecord(TypedDict, total=False):
   wish_list: List[WishListItemRecord]
   ai_session_token: Optional[str]
   ai_session_expires_at: Optional[str]
+  ai_session_assignment_version: Optional[int]
 
 
 class GameRecord(TypedDict):
