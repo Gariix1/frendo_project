@@ -3,9 +3,11 @@ import { useEffect, useState } from 'react'
 import GlassCard from '../components/GlassCard'
 import Button from '../components/Button'
 import Layout from '../components/Layout'
+import GiftAssistant from '../components/GiftAssistant'
 import { api } from '../lib/api'
 import ConfirmDialog from '../components/ConfirmDialog'
 import { useI18n } from '../i18n/I18nProvider'
+
 export default function ViewResult() {
   const { gameId, token } = useParams()
   const [name, setName] = useState('')
@@ -62,6 +64,7 @@ export default function ViewResult() {
             {assignedTo && (
               <div className="mt-2">
                 <p className="text-lg">{t('view.result', { name: assignedTo })}</p>
+                {gameId && token && <GiftAssistant gameId={gameId} token={token} />}
               </div>
             )}
             {!assignedTo && viewed && (
